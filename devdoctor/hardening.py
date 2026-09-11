@@ -13,6 +13,7 @@ from typing import Any
 
 import typer
 
+from devdoctor.host_policy import ATOMIC_USER_SPACE_ORDER, system_is_atomic
 from devdoctor.package_managers import (
     PackageManagerInfo,
     detect_package_managers,
@@ -22,7 +23,7 @@ from devdoctor.package_managers import (
 from devdoctor.utils import read_os_release
 
 _REGISTERED_APP_IDS: set[int] = set()
-_ATOMIC_USER_SPACE_ORDER = ("brew", "flatpak", "nix", "cargo", "npm", "pnpm", "pipx", "pip")
+_ATOMIC_USER_SPACE_ORDER = ATOMIC_USER_SPACE_ORDER
 _ALLOWED_SESSION_TYPES = {"wayland", "x11", "tty"}
 _ALLOWED_SHELL_NAMES = {"bash", "zsh", "fish", "sh", "dash", "ksh", "csh", "tcsh", "nu"}
 
@@ -63,102 +64,19 @@ def atomic_safe_manager_order(
     return tuple(manager for manager in order if manager in installed)
 
 
-def _manager_ids_from_system(system: Mapping[str, Any]) -> set[str]:
-    values = system.get("package_managers", ())
-    return {
-        str(item.get("id"))
-        for item in values
-        if isinstance(item, Mapping) and item.get("installed") is True
-    }
-
-
 def _system_context_is_atomic(system: Mapping[str, Any]) -> bool:
     """Use the inventory's persisted classification without launching new probes."""
 
-    if "atomic_host" in system:
-        return system.get("atomic_host") is True
-
-    distro_id = str(system.get("distribution_id", "")).lower()
-    if distro_id == "bazzite":
-        return True
-
-    managers = _manager_ids_from_system(system)
-    if "rpm-ostree" not in managers:
-        return False
-
-    distribution = str(system.get("distribution", "")).lower()
-    atomic_markers = ("silverblue", "kinoite", "sericea", "onyx", "atomic", "ostree")
-    if any(marker in distribution for marker in atomic_markers):
-        return True
-    return distro_id in {"ublue", "universal-blue"}
-
-
-def _manager_ids_from_inventory(inventory: Any) -> set[str]:
-    system = getattr(inventory, "system", {})
-    return _manager_ids_from_system(system) if isinstance(system, Mapping) else set()
-
-
-def _inventory_atomic(inventory: Any) -> bool:
-    system = getattr(inventory, "system", {})
-    return _system_context_is_atomic(system) if isinstance(system, Mapping) else False
+    return system_is_atomic(system)
 
 
 def apply_runtime_hardening() -> None:
-    """Patch legacy internal planners with Atomic-safe behavior until they are refactored."""
+    """No-op kept for compatibility.
 
-    from devdoctor import bootstrap, cli
-
-    if getattr(bootstrap, "_devdoctor_hardened", False):
-        return
-
-    original_preferred = bootstrap._preferred_install_manager
-    original_update_commands = cli._update_commands
-    original_cache_commands = cli._cache_clean_commands
-
-    def preferred_install_manager(spec: Any, system: Mapping[str, Any]) -> tuple[str, str] | None:
-        installed = _manager_ids_from_system(system)
-        if _system_context_is_atomic(system):
-            for manager in (*_ATOMIC_USER_SPACE_ORDER, "rpm-ostree"):
-                if manager in installed and manager in spec.packages:
-                    if manager == "rpm-ostree":
-                        reason = (
-                            "Atomic/image-based host policy: no mapped user-space manager is "
-                            "available, so use explicit rpm-ostree layering and never dnf."
-                        )
-                    else:
-                        reason = (
-                            "Atomic/image-based host policy: prefer mapped user-space tooling "
-                            "before rpm-ostree layering and never use dnf for host mutation."
-                        )
-                    return manager, reason
-            return None
-        return original_preferred(spec, system)
-
-    def update_commands(inventory: Any) -> tuple[tuple[str, ...], ...]:
-        if not _inventory_atomic(inventory):
-            return original_update_commands(inventory)
-        managers = _manager_ids_from_inventory(inventory)
-        commands: list[tuple[str, ...]] = []
-        if "rpm-ostree" in managers:
-            commands.append(("rpm-ostree", "upgrade"))
-        if "flatpak" in managers:
-            commands.append(("flatpak", "update"))
-        if "brew" in managers:
-            commands.extend((("brew", "update"), ("brew", "upgrade")))
-        return tuple(commands)
-
-    def cache_clean_commands(inventory: Any) -> tuple[tuple[str, ...], ...]:
-        commands = original_cache_commands(inventory)
-        if not _inventory_atomic(inventory):
-            return commands
-        return tuple(
-            command for command in commands if not (len(command) > 1 and command[1] == "dnf")
-        )
-
-    bootstrap._preferred_install_manager = preferred_install_manager
-    cli._update_commands = update_commands
-    cli._cache_clean_commands = cache_clean_commands
-    bootstrap._devdoctor_hardened = True
+    Atomic-safe install planning, update, and cache-clean rules are built into
+    :mod:`devdoctor.bootstrap` and :mod:`devdoctor.cli`; they no longer depend
+    on this function running first.
+    """
 
 
 def _redact_string(value: str) -> str:

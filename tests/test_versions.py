@@ -26,9 +26,5 @@ def test_parse_version_common_outputs(output: str, expected: str) -> None:
     assert parse_version(output) == expected
 
 
-def test_parse_version_returns_first_line_when_no_version_token_exists() -> None:
-    assert parse_version("custom build\nextra") == "custom build"
-
-
 def test_parse_version_returns_none_for_empty_output() -> None:
     assert parse_version("") is None

@@ -59,6 +59,7 @@ class PathAnalysis:
     entries: tuple[str, ...]
     issues: tuple[PathIssue, ...]
     shadowed_executables: tuple[ShadowedExecutable, ...]
+    cleanup_command: str | None = None
 
     def to_dict(self) -> dict[str, JsonValue]:
         """Convert the analysis to JSON data."""
@@ -68,6 +69,7 @@ class PathAnalysis:
             "issue_count": len(self.issues),
             "issues": [issue.to_dict() for issue in self.issues],
             "shadowed_executables": [shadowed.to_dict() for shadowed in self.shadowed_executables],
+            "cleanup_command": self.cleanup_command,
         }
 
 
@@ -84,6 +86,7 @@ def analyze_path(
     )
     home_dir = home or Path.home()
     issues: list[PathIssue] = []
+    removable: set[str] = set()
     normalized_entries = tuple(entry for entry in raw_entries if entry)
     counter = Counter(normalized_entries)
 
@@ -122,9 +125,9 @@ def analyze_path(
                     path=entry,
                     problem="PATH entry does not exist.",
                     recommendation="Create the directory or remove it from PATH.",
-                    export_command=_remove_export_command(entry, raw_entries),
                 )
             )
+            removable.add(entry)
             continue
         if not path.is_dir():
             issues.append(
@@ -133,9 +136,9 @@ def analyze_path(
                     path=entry,
                     problem="PATH entry exists but is not a directory.",
                     recommendation="Remove the file from PATH.",
-                    export_command=_remove_export_command(entry, raw_entries),
                 )
             )
+            removable.add(entry)
             continue
         if not os.access(path, os.R_OK | os.X_OK):
             issues.append(
@@ -170,6 +173,7 @@ def analyze_path(
         entries=normalized_entries,
         issues=tuple(issues),
         shadowed_executables=shadowed,
+        cleanup_command=_cleanup_export_command(normalized_entries, removable),
     )
 
 
@@ -196,10 +200,11 @@ def executable_paths(executable: str, path_entries: Iterable[str] | None = None)
         broken_symlink = candidate.is_symlink() and not candidate.exists()
         if executable_exists or broken_symlink:
             rendered = str(candidate)
-            if rendered in seen:
+            identity = os.path.realpath(rendered)
+            if identity in seen:
                 continue
             matches.append(rendered)
-            seen.add(rendered)
+            seen.add(identity)
     return tuple(matches)
 
 
@@ -227,6 +232,14 @@ def _common_user_bins(home: Path) -> tuple[Path, ...]:
     )
 
 
-def _remove_export_command(target: str, entries: Iterable[str]) -> str:
-    kept = [entry for entry in entries if entry and entry != target]
-    return f'export PATH="{"${PATH}" if not kept else os.pathsep.join(kept)}"'
+def _cleanup_export_command(entries: Iterable[str], removable: set[str]) -> str | None:
+    """Return one ``export PATH`` line with dead entries and duplicates dropped."""
+
+    if not removable:
+        return None
+    kept: list[str] = []
+    for entry in entries:
+        if entry in removable or entry in kept:
+            continue
+        kept.append(entry)
+    return f'export PATH="{os.pathsep.join(kept) if kept else "${PATH}"}"'

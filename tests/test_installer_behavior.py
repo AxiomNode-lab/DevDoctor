@@ -175,3 +175,45 @@ def test_installer_refuses_concurrent_activation_lock(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "already active" in result.stderr
     assert lock.exists()
+
+
+def _run_installer_args(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ("sh", str(INSTALLER), *args),
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_installer_git_source_installs_main_from_the_repository(tmp_path: Path) -> None:
+    # Until a PyPI release exists this is the only source that can succeed.
+    env, _data_home, bin_home = _installer_env(tmp_path)
+
+    result = _run_installer_args(env, "--source", "git", "--yes")
+
+    assert result.returncode == 0, result.stderr
+    assert "package: git+https://github.com/AxiomNode-lab/DevDoctor.git@main" in result.stdout
+    assert (bin_home / "devdoctor").is_symlink()
+
+
+def test_installer_git_source_with_version_pins_the_release_tag(tmp_path: Path) -> None:
+    env, _data_home, _bin_home = _installer_env(tmp_path)
+
+    result = _run_installer_args(env, "--source", "git", "--version", VERSION, "--yes")
+
+    assert result.returncode == 0, result.stderr
+    assert f"@v{VERSION}" in result.stdout
+
+
+def test_installer_git_source_requires_a_git_executable(tmp_path: Path) -> None:
+    env, _data_home, _bin_home = _installer_env(tmp_path)
+    fake_git = tmp_path / "fake-bin" / "git"
+    fake_git.write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+    fake_git.chmod(0o755)
+
+    result = _run_installer_args(env, "--source", "git", "--yes")
+
+    assert result.returncode != 0
+    assert "git is required" in result.stderr

@@ -11,8 +11,14 @@ from enum import StrEnum
 from importlib.metadata import EntryPoint, entry_points
 from pathlib import Path
 
+from devdoctor.host_policy import (
+    ATOMIC_USER_SPACE_ORDER,
+    installed_manager_ids,
+    release_is_atomic,
+    system_is_atomic,
+)
 from devdoctor.models import JsonValue
-from devdoctor.package_managers import detect_package_managers
+from devdoctor.package_managers import NIX_PACKAGES, detect_package_managers
 from devdoctor.path_analysis import analyze_path, executable_paths
 from devdoctor.utils import get_hostname, get_username, parse_version, read_os_release, run_command
 
@@ -151,6 +157,8 @@ class ToolSpec:
     category: BootstrapCategory
     executable: str
     description: str = ""
+    # Other command names the same tool may be installed under (python3 for python).
+    executable_aliases: tuple[str, ...] = ()
     version_args: tuple[str, ...] = ("--version",)
     verification_args: tuple[str, ...] | None = None
     website: str = ""
@@ -383,6 +391,10 @@ def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping
     distro_id = release.get("ID", "").lower()
     id_like = tuple(item.lower() for item in release.get("ID_LIKE", "").split())
     managers = detect_package_managers()
+    _MANAGER_VERSION_BY_PATH.clear()
+    for manager in managers:
+        if manager.path and manager.version:
+            _MANAGER_VERSION_BY_PATH[manager.path] = manager.version
     catalog = tuple(specs or get_bootstrap_tools())
     path_analysis = analyze_path(executables=(spec.executable for spec in catalog))
     manager_preference = _preferred_manager_order(distro_id=distro_id, distro_like=set(id_like))
@@ -390,6 +402,7 @@ def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping
         "distribution": release.get("PRETTY_NAME", "unknown"),
         "distribution_id": distro_id or "unknown",
         "distribution_like": list(id_like),
+        "atomic_host": release_is_atomic(release),
         "architecture": os.uname().machine if hasattr(os, "uname") else "unknown",
         "desktop_environment": _first_env(
             "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION"
@@ -424,11 +437,11 @@ def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping
 def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetection:
     """Detect one catalog tool using actual local commands and filesystem state."""
 
-    executable_path = shutil.which(spec.executable)
-    all_paths = executable_paths(spec.executable)
+    executable_name, executable_path = _resolve_executable(spec)
+    all_paths = executable_paths(executable_name)
     compound_probe = _compound_tool_probe(spec) if executable_path is None else None
     problem_path, path_issues, lookup_permission_issues = (
-        _path_lookup_problem(spec.executable, executable_path=executable_path)
+        _path_lookup_problem(executable_name, executable_path=executable_path)
         if compound_probe is None
         else (None, (), ())
     )
@@ -441,7 +454,11 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
     )
     permission_issues = () if compound_probe is not None else _permission_issues(path)
     permission_issues = (*lookup_permission_issues, *permission_issues)
-    path_issues = () if compound_probe is not None else (*path_issues, *_path_issues(path))
+    path_issues = (
+        ()
+        if compound_probe is not None
+        else (*path_issues, *_path_issues(path), *_interpreter_issues(path))
+    )
     config_locations = _existing_config_locations(spec.config_paths)
     package_manager, package_name = _owning_package(path)
     missing_dependencies = tuple(
@@ -460,7 +477,7 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
         package_manager=package_manager,
         package_name=package_name,
         config_locations=config_locations,
-        alternate_paths=tuple(found for found in all_paths if found != executable_path),
+        alternate_paths=_alternate_paths(all_paths, executable_path),
         installation_method=(
             compound_probe.installation_method
             if compound_probe is not None
@@ -482,8 +499,28 @@ def install_plan_for_spec(
     *,
     system: Mapping[str, JsonValue],
 ) -> InstallPlan | None:
-    """Build a safe install plan for one tool on the detected system."""
+    """Build a safe install plan for one tool on the detected system.
 
+    Image-based hosts (Fedora Atomic, Bazzite) get user-space managers first and
+    rpm-ostree layering last, never DNF. Everything else follows the distro's
+    manager preference. A validated Nix user-profile mapping is the fallback when
+    no other manager applies.
+    """
+
+    if system_is_atomic(system):
+        plan = _atomic_install_plan(spec, system=system)
+    else:
+        plan = _standard_install_plan(spec, system=system)
+    if plan is None:
+        plan = _nix_fallback_plan(spec, system=system)
+    return plan
+
+
+def _standard_install_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
     manager_choice = _preferred_install_manager(spec, system)
     if manager_choice is None:
         return None
@@ -491,6 +528,94 @@ def install_plan_for_spec(
     package = spec.packages.get(manager)
     if package is None:
         return None
+    return _plan_for_manager(spec, manager=manager, package=package, reason=manager_reason)
+
+
+def _atomic_install_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
+    installed = installed_manager_ids(system)
+    for manager in ATOMIC_USER_SPACE_ORDER:
+        if manager not in installed:
+            continue
+        package = _nix_package(spec) if manager == "nix" else spec.packages.get(manager)
+        if package is None:
+            continue
+        plan = _plan_for_manager(
+            spec,
+            manager=manager,
+            package=package,
+            reason=(
+                "Atomic/image-based host: prefer a mapped user-space or package-scoped manager "
+                "before layering the base image."
+            ),
+        )
+        if plan is not None:
+            return plan
+
+    if "rpm-ostree" in installed:
+        package = spec.packages.get("rpm-ostree") or spec.packages.get("dnf")
+        if package:
+            return _plan_for_manager(
+                spec,
+                manager="rpm-ostree",
+                package=package,
+                reason=(
+                    "Atomic/image-based host: no mapped user-space option is available, so use "
+                    "rpm-ostree layering for the Fedora package mapping; DNF host mutation is "
+                    "intentionally suppressed."
+                ),
+            )
+    return None
+
+
+# Bootstrap ids whose Nix catalog key does not follow the `tool.<id>` pattern.
+_NIX_CATALOG_KEYS = {"rustc": "tool.rust", "gh": "tool.github_cli"}
+
+
+def _nix_package(spec: ToolSpec) -> str | None:
+    key = _NIX_CATALOG_KEYS.get(spec.id, f"tool.{spec.id}")
+    return spec.packages.get("nix") or NIX_PACKAGES.get(key)
+
+
+def _nix_fallback_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
+    """A user-profile Nix plan, only for explicitly validated package mappings."""
+
+    if "nix" not in installed_manager_ids(system):
+        return None
+    package = _nix_package(spec)
+    if package is None:
+        return None
+    plan = _plan_for_manager(
+        spec,
+        manager="nix",
+        package=package,
+        reason=(
+            "Nix is installed and DevDoctor has an explicit user-profile mapping for this tool."
+        ),
+    )
+    if plan is None:
+        return None
+    return replace(
+        plan,
+        explanation=f"Install {spec.title} in the current Nix profile using `{package}`.",
+        requires_sudo=False,
+    )
+
+
+def _plan_for_manager(
+    spec: ToolSpec,
+    *,
+    manager: str,
+    package: str,
+    reason: str,
+) -> InstallPlan | None:
     command, dry_run, rollback = _manager_commands(manager, package)
     if command is None:
         return None
@@ -498,7 +623,7 @@ def install_plan_for_spec(
         tool_id=spec.id,
         tool_title=spec.title,
         manager=manager,
-        manager_reason=manager_reason,
+        manager_reason=reason,
         package_name=package,
         command=command,
         dry_run_command=dry_run,
@@ -647,10 +772,10 @@ def _health_from_recommendations(
     dependency_status: tuple[DependencyStatus, ...],
     recommendations: tuple[RepairRecommendation, ...],
 ) -> HealthState:
-    if not detection.installed:
-        return HealthState.MISSING
     if detection.path_issues or detection.permission_issues:
         return HealthState.BROKEN
+    if not detection.installed:
+        return HealthState.MISSING
     if any(status.required and not status.installed for status in dependency_status):
         return HealthState.WARNING
     if any(recommendation.risk == "high" for recommendation in recommendations):
@@ -667,10 +792,22 @@ def _bootstrap_tool_entry_points() -> tuple[EntryPoint, ...]:
     return tuple(all_entry_points.get(BOOTSTRAP_TOOL_ENTRY_POINT_GROUP, ()))  # type: ignore[union-attr]
 
 
+# Versions already probed for package managers, keyed by executable path, so a
+# tool that is also a manager (pip, npm, cargo, ...) is not probed twice.
+_MANAGER_VERSION_BY_PATH: dict[str, str] = {}
+
+
 def _tool_version(path: str | None, version_args: Sequence[str]) -> str | None:
     if path is None:
         return None
+    cached = _MANAGER_VERSION_BY_PATH.get(path)
+    if cached is not None:
+        return cached
     result = run_command((path, *version_args), timeout=5)
+    if result.returncode == 124:
+        # run_command's sentinel for "could not start or timed out": the stderr
+        # holds an OSError message, not tool output.
+        return None
     return parse_version(result.combined_output)
 
 
@@ -709,10 +846,13 @@ def _requires_sudo(command: Sequence[str]) -> bool:
 
 
 def _base_health(*, installed: bool, broken: bool) -> HealthState:
-    if not installed:
-        return HealthState.MISSING
+    # A command that exists but cannot run (broken symlink, dead interpreter,
+    # no execute bit) is broken, not absent: the summary counters, the repair
+    # advice, and the install plan all treat it that way.
     if broken:
         return HealthState.BROKEN
+    if not installed:
+        return HealthState.MISSING
     return HealthState.READY
 
 
@@ -1077,6 +1217,61 @@ def _path_issues(path: str | None) -> tuple[str, ...]:
     return ()
 
 
+def _resolve_executable(spec: ToolSpec) -> tuple[str, str | None]:
+    """Return the first catalog command name found in PATH and its location."""
+
+    for name in (spec.executable, *spec.executable_aliases):
+        found = shutil.which(name)
+        if found is not None:
+            return name, found
+    return spec.executable, None
+
+
+def _alternate_paths(all_paths: Sequence[str], executable_path: str | None) -> tuple[str, ...]:
+    """Other PATH locations of the same command that are genuinely different files.
+
+    Merged-usr hosts expose /bin as a symlink to /usr/bin; both spellings resolve
+    to one file and are not a duplicate installation.
+    """
+
+    if executable_path is None:
+        return tuple(all_paths)
+    primary = os.path.realpath(executable_path)
+    return tuple(
+        found
+        for found in all_paths
+        if found != executable_path and os.path.realpath(found) != primary
+    )
+
+
+def _interpreter_issues(path: str | None) -> tuple[str, ...]:
+    """Report a script whose shebang names an interpreter that no longer exists."""
+
+    if path is None:
+        return ()
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(256)
+    except OSError:
+        return ()
+    if not head.startswith(b"#!"):
+        return ()
+    parts = head.split(b"\n", 1)[0][2:].decode("utf-8", "replace").split()
+    if not parts:
+        return ()
+    interpreter = parts[0]
+    if os.path.basename(interpreter) == "env":
+        targets = [part for part in parts[1:] if not part.startswith("-")]
+        if not targets:
+            return ()
+        if shutil.which(targets[0]) is None:
+            return (f"Executable interpreter `{targets[0]}` is not in PATH (broken shebang).",)
+        return ()
+    if not os.path.exists(interpreter):
+        return (f"Executable interpreter `{interpreter}` does not exist (broken shebang).",)
+    return ()
+
+
 def _path_lookup_problem(
     executable: str,
     *,
@@ -1141,6 +1336,15 @@ def _preferred_install_manager(
     }
     distro_id = str(system.get("distribution_id", "")).lower()
     distro_like = {str(item).lower() for item in system.get("distribution_like", ())}
+    if system_is_atomic(system):
+        for manager in (*ATOMIC_USER_SPACE_ORDER, "rpm-ostree"):
+            if manager in installed_manager_ids and manager in spec.packages:
+                return (
+                    manager,
+                    "Atomic/image-based host policy: prefer mapped user-space tooling before "
+                    "rpm-ostree layering and never use dnf for host mutation.",
+                )
+        return None
     candidates = _preferred_manager_order(distro_id=distro_id, distro_like=distro_like)
 
     for manager in candidates:
@@ -1270,7 +1474,11 @@ def _manager_commands(
             ("flatpak", "uninstall", package),
         ),
         "snap": (
-            ("sudo", "snap", "install", package),
+            (
+                ("sudo", "snap", "install", package, "--classic")
+                if package in _CLASSIC_SNAPS
+                else ("sudo", "snap", "install", package)
+            ),
             ("snap", "info", package),
             ("sudo", "snap", "remove", package),
         ),
@@ -1359,6 +1567,12 @@ def _virtualization() -> str:
     if result.returncode == 0 and result.combined_output:
         return result.combined_output.splitlines()[0]
     return "none"
+
+
+# Snaps published with classic confinement; `snap install` refuses them without --classic.
+_CLASSIC_SNAPS: frozenset[str] = frozenset(
+    {"kubectl", "helm", "code", "flutter", "aws-cli", "google-cloud-cli"}
+)
 
 
 def _packages(
@@ -1476,7 +1690,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "python",
         "Python",
         BootstrapCategory.PROGRAMMING_LANGUAGES,
-        "python",
+        "python3",
+        executable_aliases=("python",),
         description="Python runtime for automation, backend services, and CLI tooling.",
         website="https://python.org/",
         tool_dependencies=(ToolDependency("pip", "Python package installation requires pip."),),
@@ -1497,6 +1712,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "pip",
         BootstrapCategory.PACKAGE_REGISTRIES,
         "pip",
+        executable_aliases=("pip3",),
         website="https://pip.pypa.io/",
         packages=_packages(
             apt="python3-pip",
@@ -1569,7 +1785,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "pnpm",
         website="https://pnpm.io/",
         config_paths=("~/.npmrc", "~/.config/pnpm/rc"),
-        packages=_packages(apt="pnpm", dnf="pnpm", pacman="pnpm", brew="pnpm", npm="pnpm"),
+        # No pnpm package in Debian/Ubuntu or Fedora repositories.
+        packages=_packages(pacman="pnpm", brew="pnpm", npm="pnpm"),
     ),
     ToolSpec(
         "yarn",
@@ -1616,7 +1833,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         packages=_packages(
             apt="cargo",
             dnf="cargo",
-            pacman="cargo",
+            pacman="rust",
             zypper="cargo",
             xbps="cargo",
             apk="cargo",
@@ -1814,8 +2031,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         description="Compose CLI for multi-container Docker applications.",
         website="https://docs.docker.com/compose/",
         packages=_packages(
-            apt="docker-compose-plugin",
-            dnf="docker-compose-plugin",
+            apt="docker-compose-v2",
+            dnf="docker-compose",
             pacman="docker-compose",
             zypper="docker-compose",
             brew="docker-compose",
@@ -1829,8 +2046,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         description="Docker BuildKit frontend for advanced and multi-platform builds.",
         website="https://docs.docker.com/buildx/working-with-buildx/",
         packages=_packages(
-            apt="docker-buildx-plugin",
-            dnf="docker-buildx-plugin",
+            apt="docker-buildx",
+            dnf="docker-buildx",
             pacman="docker-buildx",
             brew="docker-buildx",
         ),
@@ -1894,8 +2111,9 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
                 required=False,
             ),
         ),
+        # Debian/Ubuntu ship no kubectl package; it comes from the Kubernetes apt repo.
         packages=_packages(
-            apt="kubectl", dnf="kubernetes-client", pacman="kubectl", brew="kubectl", snap="kubectl"
+            dnf="kubernetes-client", pacman="kubectl", brew="kubectl", snap="kubectl"
         ),
     ),
     ToolSpec(
@@ -1905,7 +2123,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "helm",
         website="https://helm.sh/",
         config_paths=("~/.config/helm/repositories.yaml",),
-        packages=_packages(apt="helm", dnf="helm", pacman="helm", brew="helm", snap="helm"),
+        # Debian/Ubuntu ship no helm package; it comes from the Helm apt repo or snap.
+        packages=_packages(dnf="helm", pacman="helm", brew="helm", snap="helm"),
     ),
     ToolSpec(
         "terraform",
@@ -1914,7 +2133,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "terraform",
         website="https://developer.hashicorp.com/terraform",
         config_paths=("~/.terraformrc",),
-        packages=_packages(apt="terraform", dnf="terraform", pacman="terraform", brew="terraform"),
+        # Neither Debian/Ubuntu nor Fedora package Terraform; HashiCorp's own repo does.
+        packages=_packages(pacman="terraform", brew="terraform"),
     ),
     ToolSpec(
         "ansible",
@@ -1957,7 +2177,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "az",
         website="https://learn.microsoft.com/cli/azure/",
         config_paths=("~/.azure/config",),
-        packages=_packages(apt="azure-cli", dnf="azure-cli", brew="azure-cli"),
+        # Debian/Ubuntu ship no azure-cli package; it comes from Microsoft's apt repo.
+        packages=_packages(dnf="azure-cli", brew="azure-cli"),
     ),
     ToolSpec(
         "gcloud",
@@ -2034,7 +2255,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         packages=_packages(
             apt="default-mysql-client",
             dnf="mysql",
-            pacman="mysql",
+            pacman="mariadb-clients",
             zypper="mysql-client",
             brew="mysql-client",
         ),
@@ -2062,7 +2283,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "redis-cli",
         website="https://redis.io/",
         packages=_packages(
-            apt="redis-tools", dnf="redis", pacman="redis", zypper="redis", brew="redis"
+            apt="redis-tools", dnf="redis", pacman="valkey", zypper="redis", brew="redis"
         ),
     ),
     ToolSpec(
@@ -2070,6 +2291,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "OpenSSH",
         BootstrapCategory.SSH,
         "ssh",
+        version_args=("-V",),
         website="https://www.openssh.com/",
         config_paths=("~/.ssh/config",),
         packages=_packages(
@@ -2189,9 +2411,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         BootstrapCategory.PACKAGE_REGISTRIES,
         "ruff",
         website="https://docs.astral.sh/ruff/",
-        packages=_packages(
-            apt="ruff", dnf="ruff", pacman="ruff", brew="ruff", pipx="ruff", pip="ruff"
-        ),
+        # No ruff package in Debian/Ubuntu repositories.
+        packages=_packages(dnf="ruff", pacman="ruff", brew="ruff", pipx="ruff", pip="ruff"),
     ),
     ToolSpec(
         "fzf",
@@ -2208,9 +2429,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "starship",
         website="https://starship.rs/",
         config_paths=("~/.config/starship.toml",),
-        packages=_packages(
-            apt="starship", dnf="starship", pacman="starship", brew="starship", cargo="starship"
-        ),
+        # No starship package in Debian/Ubuntu or Fedora repositories.
+        packages=_packages(pacman="starship", brew="starship", cargo="starship"),
     ),
     ToolSpec(
         "mise",
@@ -2228,7 +2448,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "asdf",
         website="https://asdf-vm.com/",
         config_paths=("~/.asdfrc", "~/.tool-versions"),
-        packages=_packages(apt="asdf", dnf="asdf", pacman="asdf-vm", brew="asdf"),
+        # No asdf package in Debian/Ubuntu, Fedora, or the official Arch repositories.
+        packages=_packages(brew="asdf"),
     ),
     ToolSpec(
         "flutter",
@@ -2287,7 +2508,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         BootstrapCategory.AI,
         "nvcc",
         website="https://developer.nvidia.com/cuda-toolkit",
-        packages=_packages(apt="nvidia-cuda-toolkit", dnf="cuda-toolkit", pacman="cuda"),
+        # Fedora does not ship CUDA; it comes from NVIDIA's own repository.
+        packages=_packages(apt="nvidia-cuda-toolkit", pacman="cuda"),
     ),
     ToolSpec(
         "gdb",

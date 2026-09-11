@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-  { name = "DevDoctor contributors" }
+  { name = "AxiomNode", email = "info@axiomnode.tech" }
+]
+maintainers = [
+  { name = "AxiomNode", email = "info@axiomnode.tech" }
 ]
 keywords = [
   "linux",
@@ -56,12 +59,13 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/imedkablavi/DevDoctor"
-Repository = "https://github.com/imedkablavi/DevDoctor"
-Issues = "https://github.com/imedkablavi/DevDoctor/issues"
-Documentation = "https://github.com/imedkablavi/DevDoctor/tree/main/docs"
-Changelog = "https://github.com/imedkablavi/DevDoctor/blob/main/CHANGELOG.md"
-Security = "https://github.com/imedkablavi/DevDoctor/security/policy"
+Homepage = "https://github.com/AxiomNode-lab/DevDoctor"
+Organization = "https://axiomnode.tech/"
+Repository = "https://github.com/AxiomNode-lab/DevDoctor"
+Issues = "https://github.com/AxiomNode-lab/DevDoctor/issues"
+Documentation = "https://github.com/AxiomNode-lab/DevDoctor/tree/main/docs"
+Changelog = "https://github.com/AxiomNode-lab/DevDoctor/blob/main/CHANGELOG.md"
+Security = "https://github.com/AxiomNode-lab/DevDoctor/security/policy"
 
 [project.scripts]
 devdoctor = "devdoctor.entrypoint:main"

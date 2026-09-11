@@ -22,7 +22,9 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip >/dev/null &&
             python3 -m pip install --break-system-packages /src >/dev/null &&
             python3 /src/tests/integration/container_probe.py \
-              --expected-manager apt --expected-plan-manager apt
+              --expected-manager apt --expected-plan-manager apt \
+              --expect-ready python --expect-ready pip \
+              --verify-catalog-packages apt
           '
 
       - name: Fedora / DNF planning
@@ -31,7 +33,9 @@ jobs:
             dnf install -y python3 python3-pip >/dev/null &&
             python3 -m pip install /src >/dev/null &&
             python3 /src/tests/integration/container_probe.py \
-              --expected-manager dnf --expected-plan-manager dnf
+              --expected-manager dnf --expected-plan-manager dnf \
+              --expect-ready python --expect-ready pip \
+              --verify-catalog-packages dnf
           '
 
       - name: Arch / Pacman planning
@@ -40,7 +44,9 @@ jobs:
             pacman -Sy --noconfirm python python-pip >/dev/null &&
             python -m pip install --break-system-packages /src >/dev/null &&
             python /src/tests/integration/container_probe.py \
-              --expected-manager pacman --expected-plan-manager pacman
+              --expected-manager pacman --expected-plan-manager pacman \
+              --expect-ready python --expect-ready pip \
+              --verify-catalog-packages pacman
           '
 
       - name: SUSE BCI / Zypper planning
@@ -49,6 +55,17 @@ jobs:
             python3 -m pip install /src >/dev/null &&
             python3 /src/tests/integration/container_probe.py \
               --expected-manager zypper --expected-plan-manager zypper
+          '
+
+      - name: openSUSE Tumbleweed / zypper catalog packages exist
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -w /src opensuse/tumbleweed sh -lc '
+            zypper --non-interactive --quiet install python3 python3-pip >/dev/null &&
+            python3 -m pip install --break-system-packages /src >/dev/null &&
+            python3 /src/tests/integration/container_probe.py \
+              --expected-manager zypper --expected-plan-manager zypper \
+              --expect-ready python \
+              --verify-catalog-packages zypper
           '
 
       - name: Flatpak detection in clean Ubuntu container

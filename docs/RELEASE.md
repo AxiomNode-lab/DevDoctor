@@ -51,7 +51,7 @@ test -f "dist/devdoctor_workstation-${VERSION}.tar.gz"
 Before the first publication:
 
 - Create or confirm the `devdoctor-workstation` pending publisher/project on PyPI.
-- Configure Trusted Publishing for `imedkablavi/DevDoctor` and `.github/workflows/release.yml`.
+- Configure Trusted Publishing for `AxiomNode-lab/DevDoctor` and `.github/workflows/release.yml`.
 - Use the GitHub environment `pypi`.
 - Confirm PyPI project metadata points to this repository.
 - Only then enable `PYPI_TRUSTED_PUBLISHING_ENABLED=true`.

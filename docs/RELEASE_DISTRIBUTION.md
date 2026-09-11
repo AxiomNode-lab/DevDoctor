@@ -55,7 +55,7 @@ PYPI_TRUSTED_PUBLISHING_ENABLED=true
 Before enabling it:
 
 1. Create or configure the `devdoctor-workstation` project/pending publisher on PyPI.
-2. Add a Trusted Publisher for `imedkablavi/DevDoctor`.
+2. Add a Trusted Publisher for `AxiomNode-lab/DevDoctor`.
 3. Set the workflow to `.github/workflows/release.yml`.
 4. Set the GitHub environment name to `pypi`.
 5. Create/protect the `pypi` environment in GitHub with the desired reviewer policy.
@@ -118,7 +118,7 @@ For a downloaded release artifact, GitHub CLI can be used to verify a repository
 
 ```sh
 gh attestation verify devdoctor_workstation-1.2.0rc1-py3-none-any.whl \
-  --repo imedkablavi/DevDoctor
+  --repo AxiomNode-lab/DevDoctor
 ```
 
 The SPDX file describes the DevDoctor distribution and its declared direct runtime dependencies. It is generated deterministically from package metadata and release artifact hashes; it does not claim to be a full operating-system or transitive dependency inventory.

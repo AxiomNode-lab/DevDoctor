@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/imedkablavi/DevDoctor/main/assets/brand/github-social-banner.png" alt="DevDoctor" width="100%">
+  <img src="https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/assets/brand/github-social-banner.png" alt="DevDoctor" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/imedkablavi/DevDoctor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/imedkablavi/DevDoctor/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/imedkablavi/DevDoctor/actions/workflows/code-quality.yml"><img alt="Code Quality" src="https://github.com/imedkablavi/DevDoctor/actions/workflows/code-quality.yml/badge.svg"></a>
+  <a href="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/code-quality.yml"><img alt="Code Quality" src="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/code-quality.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-22D3EE">
   <img alt="Linux" src="https://img.shields.io/badge/platform-Linux-34D399">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8EA4BD"></a>
@@ -13,7 +13,8 @@
 <h1 align="center">DevDoctor</h1>
 
 <p align="center">
-  <strong>Diagnose broken Linux developer workstations before changing them.</strong>
+  <strong>Diagnose broken Linux developer workstations before changing them.</strong><br>
+  <sub>An open-source project by <a href="https://axiomnode.tech/">AxiomNode</a>, a student-led technology lab.</sub>
 </p>
 
 DevDoctor inspects the Linux workstation you already have, finds missing or broken developer tooling, explains package-manager and PATH conflicts, compares project requirements with the tools actually installed, and builds distro-aware repair or install plans that are previewed before execution.
@@ -25,7 +26,7 @@ Scans are read-only. Project manifests are parsed without executing project hook
 ## Demo
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/imedkablavi/DevDoctor/main/assets/screenshots/devdoctor-demo.gif" alt="DevDoctor terminal demonstration" width="100%">
+  <img src="https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/assets/screenshots/devdoctor-demo.gif" alt="DevDoctor terminal demonstration" width="100%">
 </p>
 
 The demo is generated from real command output. See [assets/screenshots](assets/screenshots/README.md) for regeneration notes.
@@ -52,10 +53,10 @@ Containers
 DevOps
 ✗ kubectl                                     sudo dnf install kubernetes-client
 ✗ Helm                                        sudo dnf install helm
-✗ Terraform                                   sudo dnf install terraform
+✗ Terraform                                   No supported local manager detected; see https://developer.hashicorp.com/terraform
 ```
 
-Typical findings include Docker daemon failures, missing runtime dependencies, broken executable symlinks, duplicate PATH installations, conflicting package managers, missing Git identity, incomplete Android/Flutter tooling, Java without `JAVA_HOME`, Python without working pip, and user-space binaries that are not exported into PATH.
+Typical findings include Docker daemon failures, missing runtime dependencies, broken executable symlinks and launcher shebangs, duplicate PATH installations, conflicting package managers, missing Git identity, incomplete Android/Flutter tooling, Java without `JAVA_HOME`, Python without working pip, and user-space binaries that are not exported into PATH.
 
 ## Install
 
@@ -67,17 +68,25 @@ The product name is **DevDoctor**. The console command is **`devdoctor`**. The P
 
 ### Current repository build
 
-Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository:
+Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository. The installer creates a user-owned virtual environment, links `~/.local/bin/devdoctor`, previews before acting, and never uses sudo:
 
 ```bash
-python -m pip install "git+https://github.com/imedkablavi/DevDoctor.git"
+curl -fsSL -o devdoctor-install.sh https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/scripts/install.sh
+sh devdoctor-install.sh --source git
+devdoctor --version
+```
+
+Or with pip alone:
+
+```bash
+python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
 devdoctor --version
 ```
 
 For development:
 
 ```bash
-git clone https://github.com/imedkablavi/DevDoctor.git
+git clone https://github.com/AxiomNode-lab/DevDoctor.git
 cd DevDoctor
 python -m pip install -e ".[dev]"
 ```
@@ -298,7 +307,7 @@ flowchart LR
   Executor --> Verify[Verification + operation log]
 ```
 
-The bootstrap model is centered on `ToolSpec`, `ToolDetection`, `InstallPlan`, `BootstrapProfile`, and `BootstrapInventory`. The current release candidate also has a conservative compatibility layer around older planners and mutating callbacks. Moving those policies into one central planner/executor API remains architecture cleanup work.
+The bootstrap model is centered on `ToolSpec`, `ToolDetection`, `InstallPlan`, `BootstrapProfile`, and `BootstrapInventory`. Host policy (Atomic/Bazzite classification, the user-space-first ordering, the Nix fallback) lives in `devdoctor.host_policy` and is applied by `install_plan_for_spec` itself, so importing the planner directly gives the same answers as the `devdoctor` command. `atomic_planning`, `fallback_planning`, and `hardening.apply_runtime_hardening` remain as thin compatibility shims; the privacy scrubber and release-safety wrappers are still applied at the entry point.
 
 ## Plugin catalog
 
@@ -345,7 +354,7 @@ When changing package mappings, package identity, manifest parsing, or safety po
 - Qualify and publish the release candidate after the final commit passes the full matrix.
 - Configure the external PyPI Trusted Publisher for `devdoctor-workstation` and protected GitHub `pypi` environment.
 - Publish and validate a Homebrew tap instead of advertising a future command prematurely.
-- Move temporary runtime policy overrides into a single central planner/executor architecture.
+- Fold the remaining entry-point wrappers (privacy scrubbing, release-safety confirmation) into the commands they guard.
 - Expand real-workstation evidence for Atomic/Bazzite and other advertised environments.
 - Expand project-aware parsing only through bounded formats and regression fixtures; do not execute project configuration.
 - Add more verified distro package mappings through contribution fixtures.
@@ -393,8 +402,12 @@ Contributions are welcome when they keep DevDoctor local-first, Linux-focused, t
 
 ## Credits
 
-DevDoctor uses [Typer](https://typer.tiangolo.com/), [Rich](https://rich.readthedocs.io/), [psutil](https://psutil.readthedocs.io/), and [platformdirs](https://platformdirs.readthedocs.io/).
+DevDoctor is built and maintained by [AxiomNode](https://axiomnode.tech/) (GitHub: [AxiomNode-lab](https://github.com/AxiomNode-lab)), a student-led technology lab building open-source software and practical tools. Contact: info@axiomnode.tech.
+
+It uses [Typer](https://typer.tiangolo.com/), [Rich](https://rich.readthedocs.io/), [psutil](https://psutil.readthedocs.io/), and [platformdirs](https://platformdirs.readthedocs.io/).
 
 ## License
 
-DevDoctor is released under the MIT License. See [LICENSE](LICENSE).
+Copyright (c) 2026 AxiomNode and DevDoctor contributors. DevDoctor is released under the MIT License. See [LICENSE](LICENSE).
+
+The DevDoctor name and the logo assets in `assets/brand/` identify the AxiomNode project; see [docs/BRAND.md](docs/BRAND.md) before reusing them for a fork or derived product.

@@ -2,7 +2,7 @@
 
 Date: 2026-08-27  
 Candidate: `1.2.0rc1`  
-Repository: `imedkablavi/DevDoctor`  
+Repository: `AxiomNode-lab/DevDoctor`  
 Python distribution: `devdoctor-workstation`  
 Executable: `devdoctor`
 
@@ -155,7 +155,7 @@ These cannot be proven by repository code alone.
 Before setting `PYPI_TRUSTED_PUBLISHING_ENABLED=true`:
 
 - [ ] Create or confirm the `devdoctor-workstation` project/pending publisher on PyPI.
-- [ ] Configure the trusted publisher for `imedkablavi/DevDoctor` and `.github/workflows/release.yml`.
+- [ ] Configure the trusted publisher for `AxiomNode-lab/DevDoctor` and `.github/workflows/release.yml`.
 - [ ] Configure the GitHub environment named `pypi`.
 - [ ] Add the desired environment reviewer/protection policy.
 - [ ] Confirm the tagged release workflow has `id-token: write` only where required.

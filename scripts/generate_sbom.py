@@ -47,8 +47,16 @@ def _spdx_id(name: str) -> str:
     return f"SPDXRef-Package-{safe or 'dependency'}"
 
 
+SUPPLIER = "Organization: AxiomNode"
+COPYRIGHT = "Copyright (c) 2026 AxiomNode"
+
+
 def generate_sbom(dist_dir: Path) -> dict[str, object]:
-    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return build_sbom(ROOT / "pyproject.toml", dist_dir)
+
+
+def build_sbom(pyproject: Path, dist_dir: Path) -> dict[str, object]:
+    metadata = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     project = metadata["project"]
     name = str(project["name"])
     version = str(project["version"])
@@ -73,7 +81,8 @@ def generate_sbom(dist_dir: Path) -> dict[str, object]:
             "filesAnalyzed": False,
             "licenseConcluded": "MIT",
             "licenseDeclared": "MIT",
-            "copyrightText": "NOASSERTION",
+            "copyrightText": COPYRIGHT,
+            "supplier": SUPPLIER,
             "externalRefs": [
                 {
                     "referenceCategory": "PACKAGE-MANAGER",
@@ -125,12 +134,12 @@ def generate_sbom(dist_dir: Path) -> dict[str, object]:
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": f"{name}-{version}",
         "documentNamespace": (
-            "https://github.com/imedkablavi/DevDoctor/sbom/"
+            "https://github.com/AxiomNode-lab/DevDoctor/sbom/"
             f"{name}/{version}/{artifact_fingerprint.hexdigest()}"
         ),
         "creationInfo": {
             "created": _created_at(),
-            "creators": ["Tool: DevDoctor scripts/generate_sbom.py"],
+            "creators": [SUPPLIER, "Tool: DevDoctor scripts/generate_sbom.py"],
         },
         "packages": packages,
         "relationships": relationships,

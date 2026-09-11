@@ -1,4 +1,9 @@
-"""Conservative fallback package plans for managers not fully modeled in the legacy catalog."""
+"""Conservative Nix fallback plans.
+
+The fallback is applied by :func:`devdoctor.bootstrap.install_plan_for_spec`
+itself once every other manager has declined. This module keeps the public
+name earlier callers used; it no longer patches the planner.
+"""
 
 from __future__ import annotations
 
@@ -6,27 +11,6 @@ from collections.abc import Mapping
 
 from devdoctor import bootstrap
 from devdoctor.models import JsonValue
-from devdoctor.package_managers import NIX_PACKAGES
-
-_PATCHED = False
-_NIX_CATALOG_KEYS = {
-    "rustc": "tool.rust",
-    "gh": "tool.github_cli",
-}
-
-
-def _installed_manager_ids(system: Mapping[str, JsonValue]) -> set[str]:
-    managers = system.get("package_managers", ())
-    return {
-        str(manager.get("id"))
-        for manager in managers
-        if isinstance(manager, dict) and manager.get("installed") is True
-    }
-
-
-def _nix_package(spec: bootstrap.ToolSpec) -> str | None:
-    key = _NIX_CATALOG_KEYS.get(spec.id, f"tool.{spec.id}")
-    return spec.packages.get("nix") or NIX_PACKAGES.get(key)
 
 
 def nix_plan_for_spec(
@@ -36,50 +20,8 @@ def nix_plan_for_spec(
 ) -> bootstrap.InstallPlan | None:
     """Return a user-profile Nix plan only for explicitly validated package mappings."""
 
-    if "nix" not in _installed_manager_ids(system):
-        return None
-    package = _nix_package(spec)
-    if package is None:
-        return None
-    command, dry_run, rollback = bootstrap._manager_commands("nix", package)
-    if command is None:
-        return None
-    return bootstrap.InstallPlan(
-        tool_id=spec.id,
-        tool_title=spec.title,
-        manager="nix",
-        manager_reason=(
-            "Nix is installed and DevDoctor has an explicit user-profile mapping for this tool."
-        ),
-        package_name=package,
-        command=command,
-        dry_run_command=dry_run,
-        verify_command=bootstrap._verification_command(spec),
-        rollback_command=rollback,
-        explanation=f"Install {spec.title} in the current Nix profile using `{package}`.",
-        risk=bootstrap._install_risk("nix"),
-        requires_sudo=False,
-        dependencies=tuple(dependency.tool_id for dependency in spec.tool_dependencies),
-    )
+    return bootstrap._nix_fallback_plan(spec, system=system)
 
 
 def apply_fallback_planning_patch() -> None:
-    """Add conservative Nix fallback after the normal/Atomic planner has declined a plan."""
-
-    global _PATCHED
-    if _PATCHED:
-        return
-    original = bootstrap.install_plan_for_spec
-
-    def planner(
-        spec: bootstrap.ToolSpec,
-        *,
-        system: Mapping[str, JsonValue],
-    ) -> bootstrap.InstallPlan | None:
-        plan = original(spec, system=system)
-        if plan is not None:
-            return plan
-        return nix_plan_for_spec(spec, system=system)
-
-    bootstrap.install_plan_for_spec = planner
-    _PATCHED = True
+    """No-op kept for compatibility: the Nix fallback is built into the planner."""

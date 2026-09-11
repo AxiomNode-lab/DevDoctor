@@ -1,28 +1,31 @@
-"""Public console entry point with release hardening enabled."""
+"""Public console entry point."""
 
 from __future__ import annotations
 
-from devdoctor.atomic_planning import apply_atomic_planning_patch
-from devdoctor.fallback_planning import apply_fallback_planning_patch
+import typer
+
+_APP: typer.Typer | None = None
 
 
-def main() -> None:
-    """Run DevDoctor with planner policy installed before the CLI binds imports."""
+def build_app() -> typer.Typer:
+    """Return the console app with every command group registered, built once.
 
-    # cli.py imports planner functions directly from bootstrap. Install planner
-    # wrappers first so every CLI alias receives the hardened implementation.
-    apply_atomic_planning_patch()
-    apply_fallback_planning_patch()
+    This is exactly what the ``devdoctor`` command runs; tests use it too so
+    the extra command groups and the release-safety wrappers are exercised.
+    """
+
+    global _APP
+    if _APP is not None:
+        return _APP
 
     from devdoctor.cli import app
-    from devdoctor.hardening import apply_runtime_hardening, register_hardening_commands
+    from devdoctor.hardening import register_hardening_commands
     from devdoctor.path_conflicts import register_path_conflict_command
     from devdoctor.privacy_hardening import apply_privacy_hardening
     from devdoctor.project_diagnostics import register_project_diagnostics_command
     from devdoctor.release_safety import apply_release_safety
     from devdoctor.repair_transactions import register_repair_transaction_commands
 
-    apply_runtime_hardening()
     apply_privacy_hardening()
 
     # Import after the shared diagnostic function has been privacy-hardened so
@@ -35,4 +38,11 @@ def main() -> None:
     register_project_diagnostics_command(app)
     register_support_report_command(app)
     apply_release_safety(app)
-    app()
+    _APP = app
+    return app
+
+
+def main() -> None:
+    """Run DevDoctor."""
+
+    build_app()()

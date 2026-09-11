@@ -1,7 +1,7 @@
 repository:
   name: DevDoctor
   description: "Diagnose, bootstrap, and repair Linux developer workstations from real local inventory."
-  homepage: "https://github.com/imedkablavi/DevDoctor"
+  homepage: "https://github.com/AxiomNode-lab/DevDoctor"
   private: false
   has_issues: true
   has_projects: true

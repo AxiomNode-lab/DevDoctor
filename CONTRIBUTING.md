@@ -7,7 +7,7 @@ The product is `DevDoctor`, the Python distribution is `devdoctor-workstation`, 
 ## Development setup
 
 ```bash
-git clone https://github.com/imedkablavi/DevDoctor.git
+git clone https://github.com/AxiomNode-lab/DevDoctor.git
 cd DevDoctor
 python -m pip install -e ".[dev]"
 python -m devdoctor --version

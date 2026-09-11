@@ -6,7 +6,7 @@ Use the public issue tracker and discussions for support that does not involve s
 
 Open a GitHub Discussion:
 
-https://github.com/imedkablavi/DevDoctor/discussions
+https://github.com/AxiomNode-lab/DevDoctor/discussions
 
 Good questions include:
 
@@ -38,7 +38,7 @@ devdoctor path-conflicts
 
 Use the bug report template:
 
-https://github.com/imedkablavi/DevDoctor/issues/new/choose
+https://github.com/AxiomNode-lab/DevDoctor/issues/new/choose
 
 Remove secrets, tokens, private paths, and internal hostnames before posting output.
 

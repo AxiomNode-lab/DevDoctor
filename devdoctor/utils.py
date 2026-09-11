@@ -70,6 +70,8 @@ def parse_version(output: str) -> str | None:
         r"(?i)\bversion\s+v?([0-9]+(?:\.[0-9A-Za-z][0-9A-Za-z.+-]*)*)",
         r"(?i)\bgo([0-9]+(?:\.[0-9A-Za-z][0-9A-Za-z.+-]*)*)",
         r"(?i)\bv([0-9]+\.[0-9A-Za-z][0-9A-Za-z.+-]*)",
+        # OpenSSH_9.6p1 style: the product name is glued to the version with "_".
+        r"(?<=_)([0-9]+\.[0-9A-Za-z][0-9A-Za-z.+-]*)",
         r"\b([0-9]+(?:\.[0-9A-Za-z][0-9A-Za-z.+-]*){1,})\b",
     )
     lines = [line.strip() for line in normalized.splitlines() if line.strip()]
@@ -78,7 +80,9 @@ def parse_version(output: str) -> str | None:
             match = re.search(pattern, candidate)
             if match:
                 return match.group(1)
-    return lines[0][:80]
+    # No version-shaped token: report nothing rather than an error message or
+    # banner text masquerading as a version.
+    return None
 
 
 def format_bytes(value: int | float) -> str:

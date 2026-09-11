@@ -7,6 +7,34 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Python and pip are detected on hosts that only ship `python3`/`pip3` (Debian, Ubuntu): catalog tools can declare alternate command names via `ToolSpec.executable_aliases`.
+- A launcher whose shebang points at a missing interpreter (a stale `~/.local/bin/pip`, for example) is reported as `broken` with the interpreter path, instead of `ready` with an OS error message shown as its version.
+- Tools that could not be executed, or whose output has no version-shaped token, report no version instead of banner or error text.
+- OpenSSH is probed with `ssh -V`; `OpenSSH_9.6p1 …` now parses as `9.6p1` rather than the bundled OpenSSL version.
+- `/bin` and `/usr/bin` (and any other directory symlink) no longer count as a duplicate installation or a shadowed executable on merged-usr hosts, which removed a spurious warning on every stock Ubuntu tool.
+- A broken symlink, dead interpreter, or missing execute bit is classified `broken` consistently in the row health, the summary counters, and JSON.
+- PATH analysis emits one combined `export PATH=…` cleanup line (`cleanup_command`) instead of repeating the full PATH in every missing-directory row.
+- Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, `asdf`, and `cuda-toolkit` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
+- Classic snaps (`kubectl`, `helm`, `code`, `flutter`, `aws-cli`, `google-cloud-cli`) are planned with `--classic`, which `snap install` requires for them.
+- Pacman mappings name packages in the official Arch repositories (verified against archlinux.org): `cargo` ships in `rust`, the MySQL client is `mariadb-clients`, `redis-cli` comes from `valkey`, and `asdf` is AUR-only so has no pacman mapping.
+- Missing tools with no supported local manager now point at the vendor site in the install column.
+- Repository links point at `AxiomNode-lab/DevDoctor`.
+- `scripts/install.sh --source git` installs from the repository (`main`, or the `v<VERSION>` tag with `--version`) through the same user-owned environment and rollback layout as the other sources. It is the only installer source that can succeed before a PyPI or GitHub release exists, and README now documents it.
+
+### Changed
+
+- DevDoctor is attributed to AxiomNode everywhere a user reads it: `devdoctor --version` prints the copyright and license, HTML/Markdown reports and the support report carry a footer, the SPDX SBOM names the supplier and copyright, and `pyproject.toml`, `LICENSE`, README, `docs/BRAND.md`, and `SECURITY.md` name the organization (`__author__`, `__copyright__`, `__license__`, `__homepage__` are exported by the package).
+- Atomic/Bazzite install planning, the Nix user-profile fallback, and the Atomic update/cache-clean rules are now part of `bootstrap.install_plan_for_spec`, `bootstrap.detect_system_context` (`atomic_host`), and the CLI helpers themselves, backed by the new `devdoctor.host_policy` module. Previously they were monkey-patched onto `bootstrap` and `cli` by the console entry point, so a direct import of the planner planned `dnf` on Silverblue. `apply_atomic_planning_patch`, `apply_fallback_planning_patch`, and `apply_runtime_hardening` are kept as no-ops for compatibility.
+
+### Added
+
+- `entrypoint.build_app()` returns the fully registered console app (built once); `tests/test_cli_commands.py` drives every public command through it on the real machine — JSON shape, exit codes, preview-only mutations, exported files, scrubbed diagnostics — lifting `cli.py` coverage from 31% to 61% and the suite from 62% to 76%.
+- `tests/test_native_planning_policy.py` asserts the planner is Atomic-safe and Nix-aware without any runtime patch, and that the legacy patch functions no longer replace planner functions.
+- Regression suite `tests/test_detection_accuracy.py` reproducing each of the above on real files and subprocesses.
+- The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf|pacman|zypper`); the Ubuntu, Fedora, and Arch jobs run both, and a new openSUSE Tumbleweed job checks the zypper catalog (as names or capabilities).
+
 ## [1.2.0rc1] - 2026-08-27
 
 ### Added
