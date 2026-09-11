@@ -283,7 +283,14 @@ def path_analysis_panel(inventory: BootstrapInventory) -> Panel | None:
                 f"{record.get('executable')} appears more than once in PATH.",
                 ", ".join(str(path) for path in record.get("shadowed_paths", ()) or ()),
             )
-    return Panel(table, title="PATH", border_style="yellow", box=box.SIMPLE)
+    cleanup_command = path_analysis.get("cleanup_command")
+    if not cleanup_command:
+        return Panel(table, title="PATH", border_style="yellow", box=box.SIMPLE)
+    cleanup = Text.assemble(
+        ("Cleaned PATH (dead entries and duplicates removed):\n", "bold"),
+        (str(cleanup_command), "cyan"),
+    )
+    return Panel(Group(table, cleanup), title="PATH", border_style="yellow", box=box.SIMPLE)
 
 
 def search_results_table(
@@ -396,5 +403,7 @@ def _plan_text(detection: ToolDetection) -> str:
     if detection.installed:
         return ""
     if detection.install_plan is None:
+        if detection.spec.website:
+            return f"No supported local manager detected; see {detection.spec.website}"
         return "No supported local manager detected"
     return detection.install_plan.command_text
