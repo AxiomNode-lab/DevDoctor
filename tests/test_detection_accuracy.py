@@ -276,3 +276,13 @@ def test_missing_tool_without_a_local_manager_points_at_the_vendor_site(
     assert detection.installed is False
     assert "No supported local manager" in text
     assert "https://kubernetes.io/docs/tasks/tools/" in text
+
+
+def test_pacman_mappings_use_names_in_the_official_arch_repositories() -> None:
+    # Verified against archlinux.org/packages: `cargo` ships in `rust`, the MySQL
+    # client is `mariadb-clients`, `redis` was replaced by `valkey`, and asdf is
+    # AUR-only.
+    assert _catalog("cargo").packages["pacman"] == "rust"
+    assert _catalog("mysql").packages["pacman"] == "mariadb-clients"
+    assert _catalog("redis-cli").packages["pacman"] == "valkey"
+    assert "pacman" not in _catalog("asdf").packages

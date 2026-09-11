@@ -14,7 +14,7 @@ from devdoctor.package_managers import (
 from devdoctor.utils import read_os_release
 
 
-def main() -> int:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--expected-manager", required=True)
     parser.add_argument("--expected-plan-manager")
@@ -29,10 +29,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--verify-catalog-packages",
-        choices=("apt", "dnf"),
+        choices=sorted(_PACKAGE_QUERIES),
         help="Ask the host package manager whether every catalog package for it exists.",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
 
     managers = detect_package_managers()
     installed = {manager.id for manager in managers if manager.installed}
@@ -127,17 +131,35 @@ def _assert_catalog_packages_exist(manager: str) -> None:
         )
 
 
+# Read-only "do you know this package?" queries per manager. Each exits
+# non-zero for an unknown package, except apt-cache, which is inspected below.
+# openSUSE names in the catalog are often capabilities (python3-pip is provided
+# by python313-pip), so zypper is asked about provides as well as names.
+_PACKAGE_QUERIES: dict[str, tuple[str, ...]] = {
+    "apt": ("apt-cache", "policy"),
+    "dnf": ("dnf", "-q", "info"),
+    "pacman": ("pacman", "-Si"),
+    "zypper": (
+        "zypper",
+        "--non-interactive",
+        "--quiet",
+        "search",
+        "--match-exact",
+        "--provides",
+        "--type",
+        "package",
+    ),
+}
+
+
 def _package_exists(manager: str, package: str) -> bool:
+    result = subprocess.run(
+        [*_PACKAGE_QUERIES[manager], package], capture_output=True, text=True, check=False
+    )
     if manager == "apt":
-        result = subprocess.run(
-            ["apt-cache", "policy", package], capture_output=True, text=True, check=False
-        )
         # apt-cache prints nothing for an unknown package and "Candidate: (none)"
         # for one that is known but not installable.
         return "Candidate:" in result.stdout and "Candidate: (none)" not in result.stdout
-    result = subprocess.run(
-        ["dnf", "-q", "info", package], capture_output=True, text=True, check=False
-    )
     return result.returncode == 0
 
 

@@ -1833,7 +1833,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         packages=_packages(
             apt="cargo",
             dnf="cargo",
-            pacman="cargo",
+            pacman="rust",
             zypper="cargo",
             xbps="cargo",
             apk="cargo",
@@ -2255,7 +2255,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         packages=_packages(
             apt="default-mysql-client",
             dnf="mysql",
-            pacman="mysql",
+            pacman="mariadb-clients",
             zypper="mysql-client",
             brew="mysql-client",
         ),
@@ -2283,7 +2283,7 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "redis-cli",
         website="https://redis.io/",
         packages=_packages(
-            apt="redis-tools", dnf="redis", pacman="redis", zypper="redis", brew="redis"
+            apt="redis-tools", dnf="redis", pacman="valkey", zypper="redis", brew="redis"
         ),
     ),
     ToolSpec(
@@ -2448,8 +2448,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         "asdf",
         website="https://asdf-vm.com/",
         config_paths=("~/.asdfrc", "~/.tool-versions"),
-        # No asdf package in Debian/Ubuntu or Fedora repositories.
-        packages=_packages(pacman="asdf-vm", brew="asdf"),
+        # No asdf package in Debian/Ubuntu, Fedora, or the official Arch repositories.
+        packages=_packages(brew="asdf"),
     ),
     ToolSpec(
         "flutter",

@@ -18,6 +18,7 @@ and this project uses semantic versioning.
 - PATH analysis emits one combined `export PATH=…` cleanup line (`cleanup_command`) instead of repeating the full PATH in every missing-directory row.
 - Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, and `asdf` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
 - Classic snaps (`kubectl`, `helm`, `code`, `flutter`, `aws-cli`, `google-cloud-cli`) are planned with `--classic`, which `snap install` requires for them.
+- Pacman mappings name packages in the official Arch repositories (verified against archlinux.org): `cargo` ships in `rust`, the MySQL client is `mariadb-clients`, `redis-cli` comes from `valkey`, and `asdf` is AUR-only so has no pacman mapping.
 - Missing tools with no supported local manager now point at the vendor site in the install column.
 - Repository links point at `AxiomNode-lab/DevDoctor`.
 
@@ -29,7 +30,7 @@ and this project uses semantic versioning.
 
 - `tests/test_native_planning_policy.py` asserts the planner is Atomic-safe and Nix-aware without any runtime patch, and that the legacy patch functions no longer replace planner functions.
 - Regression suite `tests/test_detection_accuracy.py` reproducing each of the above on real files and subprocesses.
-- The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf`); the Ubuntu and Fedora jobs now run both.
+- The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf|pacman|zypper`); the Ubuntu, Fedora, and Arch jobs run both, and a new openSUSE Tumbleweed job checks the zypper catalog (as names or capabilities).
 
 ## [1.2.0rc1] - 2026-08-27
 
