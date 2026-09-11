@@ -20,20 +20,36 @@ def _load_probe():
 
 
 def _fake_manager(bin_dir: Path, name: str, known: str) -> None:
-    # Exit 0 only when the last argument is the one package the fake "knows".
+    # Print a match and exit 0 only when the last argument is the one package
+    # the fake "knows"; otherwise print nothing and exit 1.
     bin_dir.mkdir(parents=True, exist_ok=True)
     script = bin_dir / name
     script.write_text(
         "#!/bin/sh\n"
         f'for arg in "$@"; do last="$arg"; done\n'
-        f'[ "$last" = "{known}" ] && exit 0\n'
+        f'[ "$last" = "{known}" ] && echo "{known}-1.0" && exit 0\n'
         "exit 1\n",
         encoding="utf-8",
     )
     script.chmod(0o755)
 
 
-@pytest.mark.parametrize("manager", ["pacman", "zypper"])
+def test_dnf_query_treats_an_empty_answer_as_unknown(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # `dnf repoquery --whatprovides` exits 0 even when nothing provides the name.
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    dnf = bin_dir / "dnf"
+    dnf.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    dnf.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}/usr/bin{os.pathsep}/bin")
+    probe = _load_probe()
+
+    assert probe._package_exists("dnf", "no-such-package") is False
+
+
+@pytest.mark.parametrize("manager", ["dnf", "pacman", "zypper"])
 def test_package_exists_asks_the_host_manager(
     manager: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

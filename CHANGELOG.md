@@ -16,7 +16,7 @@ and this project uses semantic versioning.
 - `/bin` and `/usr/bin` (and any other directory symlink) no longer count as a duplicate installation or a shadowed executable on merged-usr hosts, which removed a spurious warning on every stock Ubuntu tool.
 - A broken symlink, dead interpreter, or missing execute bit is classified `broken` consistently in the row health, the summary counters, and JSON.
 - PATH analysis emits one combined `export PATH=…` cleanup line (`cleanup_command`) instead of repeating the full PATH in every missing-directory row.
-- Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, and `asdf` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
+- Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, `asdf`, and `cuda-toolkit` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
 - Classic snaps (`kubectl`, `helm`, `code`, `flutter`, `aws-cli`, `google-cloud-cli`) are planned with `--classic`, which `snap install` requires for them.
 - Pacman mappings name packages in the official Arch repositories (verified against archlinux.org): `cargo` ships in `rust`, the MySQL client is `mariadb-clients`, `redis-cli` comes from `valkey`, and `asdf` is AUR-only so has no pacman mapping.
 - Missing tools with no supported local manager now point at the vendor site in the install column.

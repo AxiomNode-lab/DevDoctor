@@ -235,7 +235,7 @@ def test_tools_absent_from_debian_repos_do_not_claim_an_apt_package(tool_id: str
     assert "apt" not in _catalog(tool_id).packages
 
 
-@pytest.mark.parametrize("tool_id", ["terraform", "pnpm", "starship", "asdf"])
+@pytest.mark.parametrize("tool_id", ["terraform", "pnpm", "starship", "asdf", "nvcc"])
 def test_tools_absent_from_fedora_repos_do_not_claim_a_dnf_package(tool_id: str) -> None:
     # Verified against src.fedoraproject.org: no source package under these names.
     assert "dnf" not in _catalog(tool_id).packages

@@ -131,13 +131,13 @@ def _assert_catalog_packages_exist(manager: str) -> None:
         )
 
 
-# Read-only "do you know this package?" queries per manager. Each exits
-# non-zero for an unknown package, except apt-cache, which is inspected below.
-# openSUSE names in the catalog are often capabilities (python3-pip is provided
-# by python313-pip), so zypper is asked about provides as well as names.
+# Read-only "do you know this package?" queries per manager. Fedora and
+# openSUSE catalog names are often capabilities (npm is provided by
+# nodejs22-npm, python3-pip by python313-pip), so dnf and zypper are asked
+# about provides as well as names; their answers are inspected below.
 _PACKAGE_QUERIES: dict[str, tuple[str, ...]] = {
     "apt": ("apt-cache", "policy"),
-    "dnf": ("dnf", "-q", "info"),
+    "dnf": ("dnf", "-q", "repoquery", "--whatprovides"),
     "pacman": ("pacman", "-Si"),
     "zypper": (
         "zypper",
@@ -160,6 +160,9 @@ def _package_exists(manager: str, package: str) -> bool:
         # apt-cache prints nothing for an unknown package and "Candidate: (none)"
         # for one that is known but not installable.
         return "Candidate:" in result.stdout and "Candidate: (none)" not in result.stdout
+    if manager == "dnf":
+        # repoquery exits 0 either way; an unknown capability just lists nothing.
+        return result.returncode == 0 and bool(result.stdout.strip())
     return result.returncode == 0
 
 

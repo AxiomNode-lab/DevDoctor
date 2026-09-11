@@ -2508,7 +2508,8 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         BootstrapCategory.AI,
         "nvcc",
         website="https://developer.nvidia.com/cuda-toolkit",
-        packages=_packages(apt="nvidia-cuda-toolkit", dnf="cuda-toolkit", pacman="cuda"),
+        # Fedora does not ship CUDA; it comes from NVIDIA's own repository.
+        packages=_packages(apt="nvidia-cuda-toolkit", pacman="cuda"),
     ),
     ToolSpec(
         "gdb",
