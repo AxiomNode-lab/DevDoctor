@@ -12,7 +12,7 @@ REPOSITORY="AxiomNode-lab/DevDoctor"
 
 usage() {
   cat <<'EOF'
-Usage: install.sh [--version VERSION] [--source pypi|github] [--yes]
+Usage: install.sh [--version VERSION] [--source pypi|github|git] [--yes]
 
 Installs DevDoctor into a user-owned virtual environment and links
 ~/.local/bin/devdoctor (or $XDG_BIN_HOME/devdoctor). No sudo is used.
@@ -21,6 +21,9 @@ Sources:
   pypi    Install devdoctor-workstation from PyPI.
   github  Download the exact release wheel and SHA256SUMS from GitHub,
           verify the wheel, then install it.
+  git     Install straight from the repository with pip (main, or the
+          v<VERSION> tag when --version is given). Works before any PyPI
+          or GitHub release exists; requires git.
 
 The installer previews the action and asks for confirmation unless --yes is given.
 A GitHub release install requires an explicit version.
@@ -56,12 +59,19 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$INSTALL_SOURCE" in
-  pypi|github) ;;
+  pypi|github|git) ;;
   *)
-    echo "Unsupported source: $INSTALL_SOURCE (use pypi or github)" >&2
+    echo "Unsupported source: $INSTALL_SOURCE (use pypi, github, or git)" >&2
     exit 2
     ;;
 esac
+
+if [ "$INSTALL_SOURCE" = "git" ]; then
+  git --version >/dev/null 2>&1 || {
+    echo "git is required for a git source install (pip clones the repository)." >&2
+    exit 1
+  }
+fi
 
 if [ "$INSTALL_SOURCE" = "github" ] && [ "$REQUESTED_VERSION" = "latest" ]; then
   echo "GitHub release installs require --version VERSION." >&2
@@ -95,7 +105,13 @@ fi
 rm -rf "$VENV_PROBE"
 
 SPEC="$PACKAGE"
-if [ "$REQUESTED_VERSION" != "latest" ]; then
+if [ "$INSTALL_SOURCE" = "git" ]; then
+  GIT_REF="main"
+  if [ "$REQUESTED_VERSION" != "latest" ]; then
+    GIT_REF="v$REQUESTED_VERSION"
+  fi
+  SPEC="git+https://github.com/$REPOSITORY.git@$GIT_REF"
+elif [ "$REQUESTED_VERSION" != "latest" ]; then
   SPEC="$PACKAGE==$REQUESTED_VERSION"
 fi
 

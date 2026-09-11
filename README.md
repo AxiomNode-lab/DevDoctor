@@ -68,7 +68,15 @@ The product name is **DevDoctor**. The console command is **`devdoctor`**. The P
 
 ### Current repository build
 
-Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository:
+Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository. The installer creates a user-owned virtual environment, links `~/.local/bin/devdoctor`, previews before acting, and never uses sudo:
+
+```bash
+curl -fsSL -o devdoctor-install.sh https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/scripts/install.sh
+sh devdoctor-install.sh --source git
+devdoctor --version
+```
+
+Or with pip alone:
 
 ```bash
 python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"

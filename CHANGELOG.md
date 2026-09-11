@@ -21,6 +21,7 @@ and this project uses semantic versioning.
 - Pacman mappings name packages in the official Arch repositories (verified against archlinux.org): `cargo` ships in `rust`, the MySQL client is `mariadb-clients`, `redis-cli` comes from `valkey`, and `asdf` is AUR-only so has no pacman mapping.
 - Missing tools with no supported local manager now point at the vendor site in the install column.
 - Repository links point at `AxiomNode-lab/DevDoctor`.
+- `scripts/install.sh --source git` installs from the repository (`main`, or the `v<VERSION>` tag with `--version`) through the same user-owned environment and rollback layout as the other sources. It is the only installer source that can succeed before a PyPI or GitHub release exists, and README now documents it.
 
 ### Changed
 
