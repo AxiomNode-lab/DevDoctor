@@ -125,7 +125,7 @@ def generate_sbom(dist_dir: Path) -> dict[str, object]:
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": f"{name}-{version}",
         "documentNamespace": (
-            "https://github.com/imedkablavi/DevDoctor/sbom/"
+            "https://github.com/AxiomNode-lab/DevDoctor/sbom/"
             f"{name}/{version}/{artifact_fingerprint.hexdigest()}"
         ),
         "creationInfo": {

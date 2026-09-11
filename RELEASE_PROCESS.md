@@ -64,7 +64,7 @@ The self-update preview must contain `devdoctor-workstation`.
 Before enabling publication:
 
 1. Create or confirm the PyPI pending publisher/project named `devdoctor-workstation`.
-2. Configure repository `imedkablavi/DevDoctor`.
+2. Configure repository `AxiomNode-lab/DevDoctor`.
 3. Configure workflow `.github/workflows/release.yml`.
 4. Configure GitHub environment `pypi`.
 5. Confirm PyPI metadata links back to this repository.

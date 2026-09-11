@@ -12,7 +12,7 @@ Do not open a public issue for a suspected vulnerability.
 
 Use GitHub Security Advisories for this repository:
 
-https://github.com/imedkablavi/DevDoctor/security/advisories/new
+https://github.com/AxiomNode-lab/DevDoctor/security/advisories/new
 
 Include:
 

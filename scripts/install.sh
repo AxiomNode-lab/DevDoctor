@@ -8,7 +8,7 @@ ASSUME_YES=0
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 BIN_HOME="${XDG_BIN_HOME:-$HOME/.local/bin}"
 BASE_DIR="$DATA_HOME/devdoctor"
-REPOSITORY="imedkablavi/DevDoctor"
+REPOSITORY="AxiomNode-lab/DevDoctor"
 
 usage() {
   cat <<'EOF'

@@ -7,6 +7,25 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Python and pip are detected on hosts that only ship `python3`/`pip3` (Debian, Ubuntu): catalog tools can declare alternate command names via `ToolSpec.executable_aliases`.
+- A launcher whose shebang points at a missing interpreter (a stale `~/.local/bin/pip`, for example) is reported as `broken` with the interpreter path, instead of `ready` with an OS error message shown as its version.
+- Tools that could not be executed, or whose output has no version-shaped token, report no version instead of banner or error text.
+- OpenSSH is probed with `ssh -V`; `OpenSSH_9.6p1 …` now parses as `9.6p1` rather than the bundled OpenSSL version.
+- `/bin` and `/usr/bin` (and any other directory symlink) no longer count as a duplicate installation or a shadowed executable on merged-usr hosts, which removed a spurious warning on every stock Ubuntu tool.
+- A broken symlink, dead interpreter, or missing execute bit is classified `broken` consistently in the row health, the summary counters, and JSON.
+- PATH analysis emits one combined `export PATH=…` cleanup line (`cleanup_command`) instead of repeating the full PATH in every missing-directory row.
+- Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, and `asdf` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
+- Classic snaps (`kubectl`, `helm`, `code`, `flutter`, `aws-cli`, `google-cloud-cli`) are planned with `--classic`, which `snap install` requires for them.
+- Missing tools with no supported local manager now point at the vendor site in the install column.
+- Repository links point at `AxiomNode-lab/DevDoctor`.
+
+### Added
+
+- Regression suite `tests/test_detection_accuracy.py` reproducing each of the above on real files and subprocesses.
+- The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf`); the Ubuntu and Fedora jobs now run both.
+
 ## [1.2.0rc1] - 2026-08-27
 
 ### Added

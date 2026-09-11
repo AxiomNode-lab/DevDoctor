@@ -7,7 +7,7 @@ class Devdoctor < Formula
   include Language::Python::Virtualenv
 
   desc "Diagnose, bootstrap, and repair Linux developer workstations"
-  homepage "https://github.com/imedkablavi/DevDoctor"
+  homepage "https://github.com/AxiomNode-lab/DevDoctor"
   url "https://files.pythonhosted.org/packages/source/d/devdoctor-workstation/devdoctor_workstation-__VERSION__.tar.gz"
   sha256 "__SDIST_SHA256__"
   license "MIT"

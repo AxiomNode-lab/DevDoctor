@@ -56,12 +56,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/imedkablavi/DevDoctor"
-Repository = "https://github.com/imedkablavi/DevDoctor"
-Issues = "https://github.com/imedkablavi/DevDoctor/issues"
-Documentation = "https://github.com/imedkablavi/DevDoctor/tree/main/docs"
-Changelog = "https://github.com/imedkablavi/DevDoctor/blob/main/CHANGELOG.md"
-Security = "https://github.com/imedkablavi/DevDoctor/security/policy"
+Homepage = "https://github.com/AxiomNode-lab/DevDoctor"
+Repository = "https://github.com/AxiomNode-lab/DevDoctor"
+Issues = "https://github.com/AxiomNode-lab/DevDoctor/issues"
+Documentation = "https://github.com/AxiomNode-lab/DevDoctor/tree/main/docs"
+Changelog = "https://github.com/AxiomNode-lab/DevDoctor/blob/main/CHANGELOG.md"
+Security = "https://github.com/AxiomNode-lab/DevDoctor/security/policy"
 
 [project.scripts]
 devdoctor = "devdoctor.entrypoint:main"

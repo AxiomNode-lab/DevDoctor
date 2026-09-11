@@ -4,7 +4,7 @@ DevDoctor v1.1.0 turns the bootstrap inventory into an intelligent detection and
 
 ## Historical packaging correction
 
-These notes originally planned to use the Python distribution name `devdoctor-cli`. That name is used by another public project and is **not** the publication identity of `imedkablavi/DevDoctor`.
+These notes originally planned to use the Python distribution name `devdoctor-cli`. That name is used by another public project and is **not** the publication identity of `AxiomNode-lab/DevDoctor`.
 
 Do not use `pip install devdoctor-cli` to install this repository. Current release work uses the distribution name `devdoctor-workstation` while preserving the `devdoctor` executable command.
 
@@ -44,7 +44,7 @@ Repair recommendations are intentionally conservative. DevDoctor prints shell ex
 For current development builds use the repository source until the `devdoctor-workstation` PyPI project is published and verified:
 
 ```bash
-python -m pip install "git+https://github.com/imedkablavi/DevDoctor.git"
+python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
 devdoctor --version
 ```
 

@@ -8,12 +8,12 @@ The GitHub project remains `DevDoctor`, the import package remains `devdoctor`, 
 
 The Python distribution prepared for publication is now `devdoctor-workstation`.
 
-The earlier candidate name `devdoctor-cli` is already used by another public project. It must not be used to install or update this repository. If you installed a package named `devdoctor-cli`, do not assume it came from `imedkablavi/DevDoctor`; inspect its package metadata and source before removing or changing it.
+The earlier candidate name `devdoctor-cli` is already used by another public project. It must not be used to install or update this repository. If you installed a package named `devdoctor-cli`, do not assume it came from `AxiomNode-lab/DevDoctor`; inspect its package metadata and source before removing or changing it.
 
 Before the first verified PyPI release, use the repository installation path:
 
 ```bash
-python -m pip install "git+https://github.com/imedkablavi/DevDoctor.git"
+python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
 devdoctor --version
 ```
 

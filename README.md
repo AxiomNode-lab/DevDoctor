@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/imedkablavi/DevDoctor/main/assets/brand/github-social-banner.png" alt="DevDoctor" width="100%">
+  <img src="https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/assets/brand/github-social-banner.png" alt="DevDoctor" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/imedkablavi/DevDoctor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/imedkablavi/DevDoctor/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/imedkablavi/DevDoctor/actions/workflows/code-quality.yml"><img alt="Code Quality" src="https://github.com/imedkablavi/DevDoctor/actions/workflows/code-quality.yml/badge.svg"></a>
+  <a href="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/code-quality.yml"><img alt="Code Quality" src="https://github.com/AxiomNode-lab/DevDoctor/actions/workflows/code-quality.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-22D3EE">
   <img alt="Linux" src="https://img.shields.io/badge/platform-Linux-34D399">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8EA4BD"></a>
@@ -25,7 +25,7 @@ Scans are read-only. Project manifests are parsed without executing project hook
 ## Demo
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/imedkablavi/DevDoctor/main/assets/screenshots/devdoctor-demo.gif" alt="DevDoctor terminal demonstration" width="100%">
+  <img src="https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/assets/screenshots/devdoctor-demo.gif" alt="DevDoctor terminal demonstration" width="100%">
 </p>
 
 The demo is generated from real command output. See [assets/screenshots](assets/screenshots/README.md) for regeneration notes.
@@ -52,10 +52,10 @@ Containers
 DevOps
 ✗ kubectl                                     sudo dnf install kubernetes-client
 ✗ Helm                                        sudo dnf install helm
-✗ Terraform                                   sudo dnf install terraform
+✗ Terraform                                   No supported local manager detected; see https://developer.hashicorp.com/terraform
 ```
 
-Typical findings include Docker daemon failures, missing runtime dependencies, broken executable symlinks, duplicate PATH installations, conflicting package managers, missing Git identity, incomplete Android/Flutter tooling, Java without `JAVA_HOME`, Python without working pip, and user-space binaries that are not exported into PATH.
+Typical findings include Docker daemon failures, missing runtime dependencies, broken executable symlinks and launcher shebangs, duplicate PATH installations, conflicting package managers, missing Git identity, incomplete Android/Flutter tooling, Java without `JAVA_HOME`, Python without working pip, and user-space binaries that are not exported into PATH.
 
 ## Install
 
@@ -70,14 +70,14 @@ The product name is **DevDoctor**. The console command is **`devdoctor`**. The P
 Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository:
 
 ```bash
-python -m pip install "git+https://github.com/imedkablavi/DevDoctor.git"
+python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
 devdoctor --version
 ```
 
 For development:
 
 ```bash
-git clone https://github.com/imedkablavi/DevDoctor.git
+git clone https://github.com/AxiomNode-lab/DevDoctor.git
 cd DevDoctor
 python -m pip install -e ".[dev]"
 ```
