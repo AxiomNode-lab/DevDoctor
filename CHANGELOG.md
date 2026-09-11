@@ -21,8 +21,13 @@ and this project uses semantic versioning.
 - Missing tools with no supported local manager now point at the vendor site in the install column.
 - Repository links point at `AxiomNode-lab/DevDoctor`.
 
+### Changed
+
+- Atomic/Bazzite install planning, the Nix user-profile fallback, and the Atomic update/cache-clean rules are now part of `bootstrap.install_plan_for_spec`, `bootstrap.detect_system_context` (`atomic_host`), and the CLI helpers themselves, backed by the new `devdoctor.host_policy` module. Previously they were monkey-patched onto `bootstrap` and `cli` by the console entry point, so a direct import of the planner planned `dnf` on Silverblue. `apply_atomic_planning_patch`, `apply_fallback_planning_patch`, and `apply_runtime_hardening` are kept as no-ops for compatibility.
+
 ### Added
 
+- `tests/test_native_planning_policy.py` asserts the planner is Atomic-safe and Nix-aware without any runtime patch, and that the legacy patch functions no longer replace planner functions.
 - Regression suite `tests/test_detection_accuracy.py` reproducing each of the above on real files and subprocesses.
 - The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf`); the Ubuntu and Fedora jobs now run both.
 

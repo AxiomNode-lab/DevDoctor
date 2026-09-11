@@ -39,6 +39,7 @@ from devdoctor.exporters.html import write_html_report
 from devdoctor.exporters.json import render_json, write_json_report
 from devdoctor.exporters.markdown import write_markdown_report
 from devdoctor.exporters.pdf import write_pdf_report
+from devdoctor.host_policy import system_is_atomic
 from devdoctor.models import HealthReport
 from devdoctor.operations import OperationLogRecord, append_operation_log
 from devdoctor.paths import latest_report_path, operation_log_path
@@ -920,6 +921,15 @@ def _execute_commands(
 def _update_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...], ...]:
     managers = _installed_manager_ids(inventory)
     commands: list[tuple[str, ...]] = []
+    if system_is_atomic(inventory.system):
+        # Image-based host: the base image is upgraded as a whole; DNF must not run.
+        if "rpm-ostree" in managers:
+            commands.append(("rpm-ostree", "upgrade"))
+        if "flatpak" in managers:
+            commands.append(("flatpak", "update"))
+        if "brew" in managers:
+            commands.extend((("brew", "update"), ("brew", "upgrade")))
+        return tuple(commands)
     if "apt" in managers:
         commands.extend((("sudo", "apt", "update"), ("sudo", "apt", "upgrade")))
     if "dnf" in managers:
@@ -942,7 +952,7 @@ def _cache_clean_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...
     commands: list[tuple[str, ...]] = []
     if "apt" in managers:
         commands.append(("sudo", "apt", "clean"))
-    if "dnf" in managers:
+    if "dnf" in managers and not system_is_atomic(inventory.system):
         commands.append(("sudo", "dnf", "clean", "all"))
     if "pacman" in managers:
         commands.append(("sudo", "pacman", "-Sc"))

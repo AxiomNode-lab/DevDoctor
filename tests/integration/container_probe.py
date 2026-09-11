@@ -7,9 +7,6 @@ import argparse
 import subprocess
 
 from devdoctor import bootstrap
-from devdoctor.atomic_planning import apply_atomic_planning_patch
-from devdoctor.fallback_planning import apply_fallback_planning_patch
-from devdoctor.hardening import apply_runtime_hardening
 from devdoctor.package_managers import (
     detect_package_managers,
     package_manager_conflicts,
@@ -36,10 +33,6 @@ def main() -> int:
         help="Ask the host package manager whether every catalog package for it exists.",
     )
     args = parser.parse_args()
-
-    apply_atomic_planning_patch()
-    apply_fallback_planning_patch()
-    apply_runtime_hardening()
 
     managers = detect_package_managers()
     installed = {manager.id for manager in managers if manager.installed}

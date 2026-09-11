@@ -11,8 +11,14 @@ from enum import StrEnum
 from importlib.metadata import EntryPoint, entry_points
 from pathlib import Path
 
+from devdoctor.host_policy import (
+    ATOMIC_USER_SPACE_ORDER,
+    installed_manager_ids,
+    release_is_atomic,
+    system_is_atomic,
+)
 from devdoctor.models import JsonValue
-from devdoctor.package_managers import detect_package_managers
+from devdoctor.package_managers import NIX_PACKAGES, detect_package_managers
 from devdoctor.path_analysis import analyze_path, executable_paths
 from devdoctor.utils import get_hostname, get_username, parse_version, read_os_release, run_command
 
@@ -385,6 +391,10 @@ def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping
     distro_id = release.get("ID", "").lower()
     id_like = tuple(item.lower() for item in release.get("ID_LIKE", "").split())
     managers = detect_package_managers()
+    _MANAGER_VERSION_BY_PATH.clear()
+    for manager in managers:
+        if manager.path and manager.version:
+            _MANAGER_VERSION_BY_PATH[manager.path] = manager.version
     catalog = tuple(specs or get_bootstrap_tools())
     path_analysis = analyze_path(executables=(spec.executable for spec in catalog))
     manager_preference = _preferred_manager_order(distro_id=distro_id, distro_like=set(id_like))
@@ -392,6 +402,7 @@ def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping
         "distribution": release.get("PRETTY_NAME", "unknown"),
         "distribution_id": distro_id or "unknown",
         "distribution_like": list(id_like),
+        "atomic_host": release_is_atomic(release),
         "architecture": os.uname().machine if hasattr(os, "uname") else "unknown",
         "desktop_environment": _first_env(
             "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION"
@@ -488,8 +499,28 @@ def install_plan_for_spec(
     *,
     system: Mapping[str, JsonValue],
 ) -> InstallPlan | None:
-    """Build a safe install plan for one tool on the detected system."""
+    """Build a safe install plan for one tool on the detected system.
 
+    Image-based hosts (Fedora Atomic, Bazzite) get user-space managers first and
+    rpm-ostree layering last, never DNF. Everything else follows the distro's
+    manager preference. A validated Nix user-profile mapping is the fallback when
+    no other manager applies.
+    """
+
+    if system_is_atomic(system):
+        plan = _atomic_install_plan(spec, system=system)
+    else:
+        plan = _standard_install_plan(spec, system=system)
+    if plan is None:
+        plan = _nix_fallback_plan(spec, system=system)
+    return plan
+
+
+def _standard_install_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
     manager_choice = _preferred_install_manager(spec, system)
     if manager_choice is None:
         return None
@@ -497,6 +528,94 @@ def install_plan_for_spec(
     package = spec.packages.get(manager)
     if package is None:
         return None
+    return _plan_for_manager(spec, manager=manager, package=package, reason=manager_reason)
+
+
+def _atomic_install_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
+    installed = installed_manager_ids(system)
+    for manager in ATOMIC_USER_SPACE_ORDER:
+        if manager not in installed:
+            continue
+        package = _nix_package(spec) if manager == "nix" else spec.packages.get(manager)
+        if package is None:
+            continue
+        plan = _plan_for_manager(
+            spec,
+            manager=manager,
+            package=package,
+            reason=(
+                "Atomic/image-based host: prefer a mapped user-space or package-scoped manager "
+                "before layering the base image."
+            ),
+        )
+        if plan is not None:
+            return plan
+
+    if "rpm-ostree" in installed:
+        package = spec.packages.get("rpm-ostree") or spec.packages.get("dnf")
+        if package:
+            return _plan_for_manager(
+                spec,
+                manager="rpm-ostree",
+                package=package,
+                reason=(
+                    "Atomic/image-based host: no mapped user-space option is available, so use "
+                    "rpm-ostree layering for the Fedora package mapping; DNF host mutation is "
+                    "intentionally suppressed."
+                ),
+            )
+    return None
+
+
+# Bootstrap ids whose Nix catalog key does not follow the `tool.<id>` pattern.
+_NIX_CATALOG_KEYS = {"rustc": "tool.rust", "gh": "tool.github_cli"}
+
+
+def _nix_package(spec: ToolSpec) -> str | None:
+    key = _NIX_CATALOG_KEYS.get(spec.id, f"tool.{spec.id}")
+    return spec.packages.get("nix") or NIX_PACKAGES.get(key)
+
+
+def _nix_fallback_plan(
+    spec: ToolSpec,
+    *,
+    system: Mapping[str, JsonValue],
+) -> InstallPlan | None:
+    """A user-profile Nix plan, only for explicitly validated package mappings."""
+
+    if "nix" not in installed_manager_ids(system):
+        return None
+    package = _nix_package(spec)
+    if package is None:
+        return None
+    plan = _plan_for_manager(
+        spec,
+        manager="nix",
+        package=package,
+        reason=(
+            "Nix is installed and DevDoctor has an explicit user-profile mapping for this tool."
+        ),
+    )
+    if plan is None:
+        return None
+    return replace(
+        plan,
+        explanation=f"Install {spec.title} in the current Nix profile using `{package}`.",
+        requires_sudo=False,
+    )
+
+
+def _plan_for_manager(
+    spec: ToolSpec,
+    *,
+    manager: str,
+    package: str,
+    reason: str,
+) -> InstallPlan | None:
     command, dry_run, rollback = _manager_commands(manager, package)
     if command is None:
         return None
@@ -504,7 +623,7 @@ def install_plan_for_spec(
         tool_id=spec.id,
         tool_title=spec.title,
         manager=manager,
-        manager_reason=manager_reason,
+        manager_reason=reason,
         package_name=package,
         command=command,
         dry_run_command=dry_run,
@@ -673,9 +792,17 @@ def _bootstrap_tool_entry_points() -> tuple[EntryPoint, ...]:
     return tuple(all_entry_points.get(BOOTSTRAP_TOOL_ENTRY_POINT_GROUP, ()))  # type: ignore[union-attr]
 
 
+# Versions already probed for package managers, keyed by executable path, so a
+# tool that is also a manager (pip, npm, cargo, ...) is not probed twice.
+_MANAGER_VERSION_BY_PATH: dict[str, str] = {}
+
+
 def _tool_version(path: str | None, version_args: Sequence[str]) -> str | None:
     if path is None:
         return None
+    cached = _MANAGER_VERSION_BY_PATH.get(path)
+    if cached is not None:
+        return cached
     result = run_command((path, *version_args), timeout=5)
     if result.returncode == 124:
         # run_command's sentinel for "could not start or timed out": the stderr
@@ -1209,6 +1336,15 @@ def _preferred_install_manager(
     }
     distro_id = str(system.get("distribution_id", "")).lower()
     distro_like = {str(item).lower() for item in system.get("distribution_like", ())}
+    if system_is_atomic(system):
+        for manager in (*ATOMIC_USER_SPACE_ORDER, "rpm-ostree"):
+            if manager in installed_manager_ids and manager in spec.packages:
+                return (
+                    manager,
+                    "Atomic/image-based host policy: prefer mapped user-space tooling before "
+                    "rpm-ostree layering and never use dnf for host mutation.",
+                )
+        return None
     candidates = _preferred_manager_order(distro_id=distro_id, distro_like=distro_like)
 
     for manager in candidates:

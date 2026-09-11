@@ -298,7 +298,7 @@ flowchart LR
   Executor --> Verify[Verification + operation log]
 ```
 
-The bootstrap model is centered on `ToolSpec`, `ToolDetection`, `InstallPlan`, `BootstrapProfile`, and `BootstrapInventory`. The current release candidate also has a conservative compatibility layer around older planners and mutating callbacks. Moving those policies into one central planner/executor API remains architecture cleanup work.
+The bootstrap model is centered on `ToolSpec`, `ToolDetection`, `InstallPlan`, `BootstrapProfile`, and `BootstrapInventory`. Host policy (Atomic/Bazzite classification, the user-space-first ordering, the Nix fallback) lives in `devdoctor.host_policy` and is applied by `install_plan_for_spec` itself, so importing the planner directly gives the same answers as the `devdoctor` command. `atomic_planning`, `fallback_planning`, and `hardening.apply_runtime_hardening` remain as thin compatibility shims; the privacy scrubber and release-safety wrappers are still applied at the entry point.
 
 ## Plugin catalog
 
@@ -345,7 +345,7 @@ When changing package mappings, package identity, manifest parsing, or safety po
 - Qualify and publish the release candidate after the final commit passes the full matrix.
 - Configure the external PyPI Trusted Publisher for `devdoctor-workstation` and protected GitHub `pypi` environment.
 - Publish and validate a Homebrew tap instead of advertising a future command prematurely.
-- Move temporary runtime policy overrides into a single central planner/executor architecture.
+- Fold the remaining entry-point wrappers (privacy scrubbing, release-safety confirmation) into the commands they guard.
 - Expand real-workstation evidence for Atomic/Bazzite and other advertised environments.
 - Expand project-aware parsing only through bounded formats and regression fixtures; do not execute project configuration.
 - Add more verified distro package mappings through contribution fixtures.
