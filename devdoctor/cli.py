@@ -13,7 +13,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from devdoctor import __version__
+from devdoctor import __copyright__, __license__, __version__
 from devdoctor.bootstrap import (
     BOOTSTRAP_PROFILES,
     BootstrapCategory,
@@ -133,6 +133,7 @@ def main(
     console = create_console(no_color=no_color)
     if version:
         console.print(f"devdoctor {__version__}")
+        console.print(f"{__copyright__}. {__license__} License.", style="dim")
         raise typer.Exit(code=0)
 
     if ctx.invoked_subcommand is not None:

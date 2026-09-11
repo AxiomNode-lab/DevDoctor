@@ -24,6 +24,7 @@ and this project uses semantic versioning.
 
 ### Changed
 
+- DevDoctor is attributed to AxiomNode everywhere a user reads it: `devdoctor --version` prints the copyright and license, HTML/Markdown reports and the support report carry a footer, the SPDX SBOM names the supplier and copyright, and `pyproject.toml`, `LICENSE`, README, `docs/BRAND.md`, and `SECURITY.md` name the organization (`__author__`, `__copyright__`, `__license__`, `__homepage__` are exported by the package).
 - Atomic/Bazzite install planning, the Nix user-profile fallback, and the Atomic update/cache-clean rules are now part of `bootstrap.install_plan_for_spec`, `bootstrap.detect_system_context` (`atomic_host`), and the CLI helpers themselves, backed by the new `devdoctor.host_policy` module. Previously they were monkey-patched onto `bootstrap` and `cli` by the console entry point, so a direct import of the planner planned `dnf` on Silverblue. `apply_atomic_planning_patch`, `apply_fallback_planning_patch`, and `apply_runtime_hardening` are kept as no-ops for compatibility.
 
 ### Added

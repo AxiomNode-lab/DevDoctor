@@ -1,5 +1,7 @@
 # Brand System
 
+DevDoctor is an [AxiomNode](https://axiomnode.tech/) project. The code is MIT-licensed; the DevDoctor name, logo, icon, and social banner in `assets/brand/` identify that project. Forks and derived products are welcome under the MIT terms but should use their own name and marks so users can tell them apart from the AxiomNode release.
+
 DevDoctor uses a calm workstation-bootstrap identity: dark terminal surfaces, cyan diagnostics, green ready states, amber warning states, and rose missing states.
 
 ## Assets

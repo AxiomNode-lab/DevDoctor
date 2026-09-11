@@ -14,6 +14,8 @@ Use GitHub Security Advisories for this repository:
 
 https://github.com/AxiomNode-lab/DevDoctor/security/advisories/new
 
+If you cannot use GitHub advisories, email the maintainers at info@axiomnode.tech with "DevDoctor security" in the subject.
+
 Include:
 
 - DevDoctor version

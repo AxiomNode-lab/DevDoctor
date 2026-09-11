@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-  { name = "DevDoctor contributors" }
+  { name = "AxiomNode", email = "info@axiomnode.tech" }
+]
+maintainers = [
+  { name = "AxiomNode", email = "info@axiomnode.tech" }
 ]
 keywords = [
   "linux",
@@ -57,6 +60,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/AxiomNode-lab/DevDoctor"
+Organization = "https://axiomnode.tech/"
 Repository = "https://github.com/AxiomNode-lab/DevDoctor"
 Issues = "https://github.com/AxiomNode-lab/DevDoctor/issues"
 Documentation = "https://github.com/AxiomNode-lab/DevDoctor/tree/main/docs"

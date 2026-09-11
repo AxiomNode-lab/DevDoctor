@@ -13,7 +13,8 @@
 <h1 align="center">DevDoctor</h1>
 
 <p align="center">
-  <strong>Diagnose broken Linux developer workstations before changing them.</strong>
+  <strong>Diagnose broken Linux developer workstations before changing them.</strong><br>
+  <sub>An open-source project by <a href="https://axiomnode.tech/">AxiomNode</a>, a student-led technology lab.</sub>
 </p>
 
 DevDoctor inspects the Linux workstation you already have, finds missing or broken developer tooling, explains package-manager and PATH conflicts, compares project requirements with the tools actually installed, and builds distro-aware repair or install plans that are previewed before execution.
@@ -393,8 +394,12 @@ Contributions are welcome when they keep DevDoctor local-first, Linux-focused, t
 
 ## Credits
 
-DevDoctor uses [Typer](https://typer.tiangolo.com/), [Rich](https://rich.readthedocs.io/), [psutil](https://psutil.readthedocs.io/), and [platformdirs](https://platformdirs.readthedocs.io/).
+DevDoctor is built and maintained by [AxiomNode](https://axiomnode.tech/) (GitHub: [AxiomNode-lab](https://github.com/AxiomNode-lab)), a student-led technology lab building open-source software and practical tools. Contact: info@axiomnode.tech.
+
+It uses [Typer](https://typer.tiangolo.com/), [Rich](https://rich.readthedocs.io/), [psutil](https://psutil.readthedocs.io/), and [platformdirs](https://platformdirs.readthedocs.io/).
 
 ## License
 
-DevDoctor is released under the MIT License. See [LICENSE](LICENSE).
+Copyright (c) 2026 AxiomNode and DevDoctor contributors. DevDoctor is released under the MIT License. See [LICENSE](LICENSE).
+
+The DevDoctor name and the logo assets in `assets/brand/` identify the AxiomNode project; see [docs/BRAND.md](docs/BRAND.md) before reusing them for a fork or derived product.
