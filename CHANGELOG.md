@@ -30,6 +30,7 @@ and this project uses semantic versioning.
 
 ### Added
 
+- `entrypoint.build_app()` returns the fully registered console app (built once); `tests/test_cli_commands.py` drives every public command through it on the real machine — JSON shape, exit codes, preview-only mutations, exported files, scrubbed diagnostics — lifting `cli.py` coverage from 31% to 61% and the suite from 62% to 76%.
 - `tests/test_native_planning_policy.py` asserts the planner is Atomic-safe and Nix-aware without any runtime patch, and that the legacy patch functions no longer replace planner functions.
 - Regression suite `tests/test_detection_accuracy.py` reproducing each of the above on real files and subprocesses.
 - The distro integration probe can assert that named tools detect as `ready` (`--expect-ready`) and that every catalog package for the host manager exists (`--verify-catalog-packages apt|dnf|pacman|zypper`); the Ubuntu, Fedora, and Arch jobs run both, and a new openSUSE Tumbleweed job checks the zypper catalog (as names or capabilities).
