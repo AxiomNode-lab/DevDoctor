@@ -355,3 +355,10 @@ devdoctor health --quiet --fail-under 80
 Exit code: `0` unless `--fail-under` is set and the legacy score is below the threshold.
 
 Related command: `devdoctor`.
+
+## Environment variables
+
+| Variable | Effect |
+| --- | --- |
+| `DEVDOCTOR_PROBE_WORKERS` | How many version probes and per-tool checks run at once during a scan. Default `4`; `1` makes the scan sequential (lowest peak memory); values above `16` are capped. |
+| `NO_COLOR` | Disable terminal colors (also `--no-color`). |

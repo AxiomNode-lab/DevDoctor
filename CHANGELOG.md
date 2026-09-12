@@ -32,7 +32,7 @@ and this project uses semantic versioning.
 
 ### Changed
 
-- Scans are concurrent: version probes and per-tool checks (`docker info`, `git config`, `python -m pip`) run through an 8-worker pool. A full inventory here dropped from ~1.8s warm / ~10s cold to under a second; results and ordering are unchanged.
+- Scans are concurrent: version probes and per-tool checks (`docker info`, `git config`, `python -m pip`) run through a small worker pool (default 4; `DEVDOCTOR_PROBE_WORKERS=1` for a sequential scan, up to 16). A full inventory here dropped from ~1.8s warm / ~10s cold to about a second; results and ordering are unchanged. Every probe alive at once adds its own memory, which is why the default stays small.
 - DevDoctor is attributed to AxiomNode everywhere a user reads it: `devdoctor --version` prints the copyright and license, HTML/Markdown reports and the support report carry a footer, the SPDX SBOM names the supplier and copyright, and `pyproject.toml`, `LICENSE`, README, `docs/BRAND.md`, and `SECURITY.md` name the organization (`__author__`, `__copyright__`, `__license__`, `__homepage__` are exported by the package).
 - Atomic/Bazzite install planning, the Nix user-profile fallback, and the Atomic update/cache-clean rules are now part of `bootstrap.install_plan_for_spec`, `bootstrap.detect_system_context` (`atomic_host`), and the CLI helpers themselves, backed by the new `devdoctor.host_policy` module. Previously they were monkey-patched onto `bootstrap` and `cli` by the console entry point, so a direct import of the planner planned `dnf` on Silverblue. `apply_atomic_planning_patch`, `apply_fallback_planning_patch`, and `apply_runtime_hardening` are kept as no-ops for compatibility.
 

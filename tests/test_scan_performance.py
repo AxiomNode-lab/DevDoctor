@@ -70,3 +70,40 @@ def test_enrichment_probes_run_in_parallel(monkeypatch: pytest.MonkeyPatch, tmp_
 
     assert [d.spec.id for d in enriched] == ["docker", "git", "python"]
     assert elapsed < 1.3, f"sequential-looking enrichment: {elapsed:.2f}s (git alone needs 0.8s)"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(None, 4), ("1", 1), ("8", 8), ("0", 4), ("-3", 4), ("many", 4), ("64", 16)],
+)
+def test_probe_worker_count_comes_from_the_environment_with_sane_bounds(
+    monkeypatch: pytest.MonkeyPatch, value: str | None, expected: int
+) -> None:
+    if value is None:
+        monkeypatch.delenv("DEVDOCTOR_PROBE_WORKERS", raising=False)
+    else:
+        monkeypatch.setenv("DEVDOCTOR_PROBE_WORKERS", value)
+
+    assert bootstrap.probe_workers() == expected
+
+
+def test_single_worker_means_sequential_probing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bin_dir = tmp_path / "bin"
+    for name in ("slowa", "slowb", "slowc"):
+        _slow_tool(bin_dir, name, 0.3)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    monkeypatch.setenv("DEVDOCTOR_PROBE_WORKERS", "1")
+    specs = tuple(
+        ToolSpec(
+            id=n, title=n, category=bootstrap.BootstrapCategory.TERMINAL_UTILITIES, executable=n
+        )
+        for n in ("slowa", "slowb", "slowc")
+    )
+
+    started = time.perf_counter()
+    bootstrap.detect_tools(specs, system={"package_managers": []})
+    elapsed = time.perf_counter() - started
+
+    assert elapsed >= 0.85, f"expected ~0.9s sequential, got {elapsed:.2f}s"
