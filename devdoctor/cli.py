@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import json
 import subprocess
 import sys
 import time
@@ -13,7 +15,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from devdoctor import __copyright__, __license__, __version__
+from devdoctor import __copyright__, __license__, __version__, snapshots
 from devdoctor.bootstrap import (
     BOOTSTRAP_PROFILES,
     BootstrapCategory,
@@ -47,6 +49,7 @@ from devdoctor.ui.bootstrap import (
     bootstrap_group,
     compact_inventory_status,
     compact_plan_status,
+    diff_table,
     profiles_table,
     repair_suggestions_table,
     search_results_table,
@@ -229,6 +232,94 @@ def doctor(
         quiet=False,
         console=create_console(no_color=no_color),
     )
+
+
+@app.command()
+def diff(
+    tools: Annotated[
+        str | None,
+        typer.Option(
+            "--tools",
+            help="Comma-separated tool IDs to rescan; the rest of the baseline is kept as is.",
+        ),
+    ] = None,
+    output_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the diff as JSON."),
+    ] = False,
+    exit_code: Annotated[
+        bool,
+        typer.Option("--exit-code", help="Exit 1 when anything changed (like git diff)."),
+    ] = False,
+    keep_baseline: Annotated[
+        bool,
+        typer.Option(
+            "--keep-baseline", help="Compare without recording this scan as the new baseline."
+        ),
+    ] = False,
+    no_color: Annotated[
+        bool,
+        typer.Option("--no-color", help="Disable terminal colors."),
+    ] = False,
+) -> None:
+    """Show what changed on this workstation since the last full scan."""
+
+    console = create_console(no_color=no_color)
+    tool_ids = tuple(item.strip() for item in (tools or "").split(",") if item.strip())
+    inventory = _inventory_for(profile_id=None, category_name=None, tool_ids=tool_ids)
+    current = snapshots.snapshot_from_inventory(inventory)
+    previous = snapshots.load()
+
+    if previous is None:
+        if not keep_baseline:
+            snapshots.save(current)
+        if output_json:
+            sys.stdout.write(
+                json.dumps({"since": None, "changed": False, "entries": [], "baseline": True})
+            )
+            sys.stdout.write("\n")
+        else:
+            console.print(
+                "[muted]No previous scan recorded; this scan is now the baseline. "
+                "Run `devdoctor diff` again later to see what changed.[/muted]"
+            )
+        return
+
+    if tool_ids:
+        # A scoped rescan compares only what it actually scanned (the requested
+        # tools plus their dependencies) and updates only those baseline entries.
+        scanned = set(current["tools"])
+        scoped_previous = dict(previous)
+        scoped_previous["tools"] = {
+            tool_id: tool for tool_id, tool in previous["tools"].items() if tool_id in scanned
+        }
+        result = snapshots.compare(scoped_previous, current)
+        merged = dict(previous)
+        merged["tools"] = {**previous["tools"], **current["tools"]}
+        merged["generated_at"] = current["generated_at"]
+        next_baseline = merged
+    else:
+        result = snapshots.compare(previous, current)
+        next_baseline = current
+
+    if not keep_baseline:
+        snapshots.save(next_baseline)
+
+    if output_json:
+        sys.stdout.write(json.dumps(result.to_dict(), indent=2))
+        sys.stdout.write("\n")
+    elif not result.changed:
+        console.print(f"[success]No changes since {result.since or 'the last scan'}.[/success]")
+    else:
+        console.print(diff_table(result))
+    if exit_code and result.changed:
+        raise typer.Exit(code=1)
+
+
+def _save_snapshot_quietly(inventory: BootstrapInventory) -> None:
+    # A read-only home must never break a read-only scan.
+    with contextlib.suppress(OSError):
+        snapshots.save(snapshots.snapshot_from_inventory(inventory))
 
 
 @app.command()
@@ -732,6 +823,9 @@ def _run_bootstrap_report(
     inventory = _inventory_for(
         profile_id=profile_id, category_name=category_name, tool_ids=tool_ids
     )
+    if not profile_id and not category_name and not tool_ids:
+        # Only a whole-catalog scan is a meaningful baseline for `devdoctor diff`.
+        _save_snapshot_quietly(inventory)
 
     if json_file:
         written = write_bootstrap_json(inventory, json_file)

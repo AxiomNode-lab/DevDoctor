@@ -19,6 +19,12 @@ def latest_report_path() -> Path:
     return state_dir() / "latest-report.json"
 
 
+def last_inventory_path() -> Path:
+    """Return where the last full-scan snapshot is kept for `devdoctor diff`."""
+
+    return state_dir() / "last-inventory.json"
+
+
 def operation_log_path() -> Path:
     """Return the append-only command operation log path."""
 

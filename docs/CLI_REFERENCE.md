@@ -356,6 +356,20 @@ Exit code: `0` unless `--fail-under` is set and the legacy score is below the th
 
 Related command: `devdoctor`.
 
+## `devdoctor diff`
+
+Rescan and compare against the snapshot written by the last full scan.
+
+```bash
+devdoctor diff
+devdoctor diff --json
+devdoctor diff --exit-code          # exit 1 when anything changed
+devdoctor diff --keep-baseline      # do not record this scan
+devdoctor diff --tools git,node     # rescan a subset; other baseline entries are kept
+```
+
+Change kinds, in the order reported: `disappeared`, `health`, `version`, `path`, `appeared`, then the PATH issue count. With no snapshot yet the command records one and says so. Snapshot location: `$XDG_STATE_HOME/devdoctor/last-inventory.json` (default `~/.local/state/devdoctor/`).
+
 ## Environment variables
 
 | Variable | Effect |

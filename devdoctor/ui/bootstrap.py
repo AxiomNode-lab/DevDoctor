@@ -19,6 +19,7 @@ from devdoctor.bootstrap import (
     InstallPlan,
     ToolDetection,
 )
+from devdoctor.snapshots import InventoryDiff
 
 
 def bootstrap_group(
@@ -246,6 +247,51 @@ def findings_panel(inventory: BootstrapInventory) -> Panel:
     warnings = len(findings) - broken
     title = f"Findings · {broken} broken · {warnings} warning" + ("s" if warnings != 1 else "")
     return Panel(table, title=title, border_style="red" if broken else "yellow", box=box.SIMPLE)
+
+
+def diff_table(diff: InventoryDiff) -> Table:
+    """Render what changed since the last snapshot, problems first."""
+
+    since = diff.since or "the last scan"
+    table = Table(
+        title=f"Changes since {since}",
+        box=box.SIMPLE,
+        border_style="cyan",
+        header_style="bold white",
+        expand=True,
+    )
+    table.add_column("", width=1, no_wrap=True)
+    table.add_column("Tool", min_width=12, ratio=1, overflow="fold")
+    table.add_column("Change", no_wrap=True)
+    table.add_column("Before", ratio=2, overflow="fold")
+    table.add_column("After", ratio=2, overflow="fold")
+    icons = {
+        "disappeared": Text("✗", style="error"),
+        "health": Text("!", style="warning"),
+        "version": Text("↑", style="path"),
+        "path": Text("→", style="path"),
+        "appeared": Text("✓", style="success"),
+    }
+    for entry in diff.entries:
+        table.add_row(
+            icons.get(entry.kind, Text("·")),
+            entry.title,
+            entry.kind,
+            entry.before or "—",
+            entry.after or "—",
+        )
+    before_issues, after_issues = diff.path_issues
+    if before_issues != after_issues:
+        table.add_row(
+            Text("!", style="warning")
+            if after_issues > before_issues
+            else Text("✓", style="success"),
+            "PATH issues",
+            "path",
+            str(before_issues),
+            str(after_issues),
+        )
+    return table
 
 
 def _unique(*items: str | Iterable[str]) -> list[str]:

@@ -168,6 +168,22 @@ The same check runs as a one-step action on any repository. It is read-only, pri
 
 This repository runs it on itself in [`project-check.yml`](.github/workflows/project-check.yml).
 
+## What changed since yesterday?
+
+Every full scan (`devdoctor` with no selection) records a small snapshot in the user state directory. `devdoctor diff` rescans and reports what changed against it — tools that appeared or disappeared, health flips, version changes, PATH issue count — then makes the new scan the baseline:
+
+```text
+$ devdoctor diff
+                       Changes since 2026-09-12T14:47:45+00:00
+      Tool          Change        Before             After
+  ✗   Node.js       disappeared   warning 20.20.2    —
+  !   pip           health        ready              broken
+  ↑   Git           version       2.43.0             2.45.0
+  ✓   PATH issues   path          32                 2
+```
+
+`--json` for scripts, `--exit-code` to exit 1 when anything changed (like `git diff`), `--keep-baseline` to compare without recording, `--tools git,node` to rescan a subset and update only those entries.
+
 ## Better bug reports
 
 `devdoctor support` converts the privacy-scrubbed diagnostic snapshot into Markdown that can be reviewed and pasted into a GitHub issue:
@@ -194,6 +210,7 @@ The repository bug-report form asks for this report when available and requests 
 | `devdoctor repair-apply [tools...]` | Preview or apply rollback-capable repair actions. |
 | `devdoctor repair-rollback TRANSACTION_ID` | Preview or apply a persisted rollback transaction. |
 | `devdoctor verify [tools...]` | Exit non-zero when selected tools need attention. |
+| `devdoctor diff` | Show what changed since the last full scan (appeared, disappeared, health, version, PATH issues). |
 | `devdoctor search QUERY` | Search the local tool catalog. |
 | `devdoctor manager-conflicts` | Report suspicious package-manager overlap. |
 | `devdoctor path-conflicts [executables...]` | Report duplicate/version/ownership PATH conflicts. |
