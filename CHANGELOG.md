@@ -24,8 +24,13 @@ and this project uses semantic versioning.
 - Repository links point at `AxiomNode-lab/DevDoctor`.
 - `scripts/install.sh --source git` installs from the repository (`main`, or the `v<VERSION>` tag with `--version`) through the same user-owned environment and rollback layout as the other sources. It is the only installer source that can succeed before a PyPI or GitHub release exists, and README now documents it.
 
+### Added
+
+- A **Findings** panel opens every report: each installed tool that is broken or has a warning, the problem, and the one action to take — the diagnosis before the inventory. When nothing is wrong it says so in one line.
+
 ### Changed
 
+- Scans are concurrent: version probes and per-tool checks (`docker info`, `git config`, `python -m pip`) run through an 8-worker pool. A full inventory here dropped from ~1.8s warm / ~10s cold to under a second; results and ordering are unchanged.
 - DevDoctor is attributed to AxiomNode everywhere a user reads it: `devdoctor --version` prints the copyright and license, HTML/Markdown reports and the support report carry a footer, the SPDX SBOM names the supplier and copyright, and `pyproject.toml`, `LICENSE`, README, `docs/BRAND.md`, and `SECURITY.md` name the organization (`__author__`, `__copyright__`, `__license__`, `__homepage__` are exported by the package).
 - Atomic/Bazzite install planning, the Nix user-profile fallback, and the Atomic update/cache-clean rules are now part of `bootstrap.install_plan_for_spec`, `bootstrap.detect_system_context` (`atomic_host`), and the CLI helpers themselves, backed by the new `devdoctor.host_policy` module. Previously they were monkey-patched onto `bootstrap` and `cli` by the console entry point, so a direct import of the planner planned `dnf` on Silverblue. `apply_atomic_planning_patch`, `apply_fallback_planning_patch`, and `apply_runtime_hardening` are kept as no-ops for compatibility.
 

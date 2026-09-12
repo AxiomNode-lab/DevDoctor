@@ -30,6 +30,7 @@ def bootstrap_group(
 
     renderables: list[object] = [
         bootstrap_header(inventory),
+        findings_panel(inventory),
         system_context_panel(inventory),
     ]
     path_panel = path_analysis_panel(inventory)
@@ -195,6 +196,67 @@ def install_plans_table(plans: Iterable[InstallPlan]) -> Table:
             " ".join(plan.dry_run_command) if plan.dry_run_command else "",
         )
     return table
+
+
+def findings_panel(inventory: BootstrapInventory) -> Panel:
+    """The doctor's note: every installed tool with a problem, and the one thing to do.
+
+    Shown first so a reader gets the diagnosis before the inventory. Missing
+    tools are not findings; the category tables and install plans cover them.
+    """
+
+    findings = [
+        detection
+        for detection in inventory.detections
+        if detection.health in {HealthState.BROKEN, HealthState.WARNING}
+    ]
+    installed = sum(1 for detection in inventory.detections if detection.installed)
+    if not findings:
+        noun = "installed tool" if installed == 1 else "installed tools"
+        return Panel(
+            Text.assemble(("✓ ", "success"), f"No problems found in {installed} {noun}."),
+            title="Findings",
+            border_style="green",
+            box=box.SIMPLE,
+        )
+
+    table = Table(box=box.SIMPLE, header_style="bold white", expand=True, show_edge=False)
+    table.add_column("", width=1, no_wrap=True)
+    table.add_column("Tool", min_width=12, ratio=1, overflow="fold")
+    table.add_column("Problem", ratio=3, overflow="fold")
+    table.add_column("Do this", ratio=3, overflow="fold")
+    for detection in findings:
+        problems = _unique(
+            *(recommendation.problem for recommendation in detection.repair_recommendations),
+            *detection.path_issues,
+            *detection.permission_issues,
+        )
+        actions = _unique(
+            recommendation.command_text
+            for recommendation in detection.repair_recommendations
+            if recommendation.command_text
+        )
+        table.add_row(
+            _status_icon(detection),
+            Text.assemble(detection.spec.title, ("\n" + detection.health.value, "dim")),
+            "\n".join(problems) or detection.health.value,
+            "\n".join(actions) or "Review the details below.",
+        )
+    broken = sum(1 for detection in findings if detection.health is HealthState.BROKEN)
+    warnings = len(findings) - broken
+    title = f"Findings · {broken} broken · {warnings} warning" + ("s" if warnings != 1 else "")
+    return Panel(table, title=title, border_style="red" if broken else "yellow", box=box.SIMPLE)
+
+
+def _unique(*items: str | Iterable[str]) -> list[str]:
+    """Flatten the arguments and drop repeats while keeping first-seen order."""
+
+    seen: list[str] = []
+    for item in items:
+        for value in [item] if isinstance(item, str) else item:
+            if value and value not in seen:
+                seen.append(value)
+    return seen
 
 
 def repair_suggestions_table(detections: Iterable[ToolDetection]) -> Table:
