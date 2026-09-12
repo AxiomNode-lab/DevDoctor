@@ -83,7 +83,9 @@ def test_uninstall_unknown_tool_is_an_error(app) -> None:
 def test_export_json_writes_a_parseable_inventory(app, tmp_path: Path) -> None:
     target = tmp_path / "inventory.json"
 
-    result = _invoke(app, "export", "json", "--output", str(target))
+    # `--profile java` is the smallest profile; a full 68-tool inventory on a
+    # tool-heavy GitHub runner image took longer than the 30s per-test timeout.
+    result = _invoke(app, "export", "json", "--profile", "java", "--output", str(target))
 
     assert result.exit_code == 0, result.output
     assert set(json.loads(target.read_text(encoding="utf-8"))) >= {"tools", "summary"}
@@ -93,7 +95,16 @@ def test_markdown_and_html_files_carry_the_footer(app, tmp_path: Path) -> None:
     markdown = tmp_path / "inventory.md"
     html = tmp_path / "inventory.html"
 
-    result = _invoke(app, "--markdown-file", str(markdown), "--html-file", str(html), "--quiet")
+    result = _invoke(
+        app,
+        "--profile",
+        "java",
+        "--markdown-file",
+        str(markdown),
+        "--html-file",
+        str(html),
+        "--quiet",
+    )
 
     assert result.exit_code == 0, result.output
     assert __copyright__ in markdown.read_text(encoding="utf-8")

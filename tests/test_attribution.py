@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import tomllib
 from pathlib import Path
 
@@ -12,6 +13,8 @@ import devdoctor
 from devdoctor.bootstrap import BootstrapInventory
 from devdoctor.cli import app
 from devdoctor.exporters.bootstrap import render_bootstrap_html, render_bootstrap_markdown
+
+HREF = re.compile(r'href="([^"]+)"')
 
 ROOT = Path(__file__).resolve().parent.parent
 COPYRIGHT = "Copyright (c) 2026 AxiomNode"
@@ -41,7 +44,7 @@ def test_html_report_footer_carries_attribution() -> None:
 
     assert "<footer" in html
     assert COPYRIGHT in html
-    assert "https://axiomnode.tech/" in html
+    assert devdoctor.__homepage__ in HREF.findall(html)
 
 
 def test_markdown_report_footer_carries_attribution() -> None:

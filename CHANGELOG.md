@@ -18,6 +18,7 @@ and this project uses semantic versioning.
 - PATH analysis emits one combined `export PATH=…` cleanup line (`cleanup_command`) instead of repeating the full PATH in every missing-directory row.
 - Install plans no longer name packages the distribution does not ship: `kubectl`, `helm`, `terraform`, `azure-cli`, `pnpm`, `ruff`, `starship`, and `asdf` on APT; `terraform`, `pnpm`, `starship`, `asdf`, and `cuda-toolkit` on DNF. Docker Compose/Buildx map to `docker-compose-v2`/`docker-buildx` (APT) and `docker-compose`/`docker-buildx` (DNF).
 - Classic snaps (`kubectl`, `helm`, `code`, `flutter`, `aws-cli`, `google-cloud-cli`) are planned with `--classic`, which `snap install` requires for them.
+- openSUSE Java maps to the `java-devel` capability (found by the Tumbleweed catalog job: there is no `java-latest-openjdk-devel` package on openSUSE).
 - Pacman mappings name packages in the official Arch repositories (verified against archlinux.org): `cargo` ships in `rust`, the MySQL client is `mariadb-clients`, `redis-cli` comes from `valkey`, and `asdf` is AUR-only so has no pacman mapping.
 - Missing tools with no supported local manager now point at the vendor site in the install column.
 - Repository links point at `AxiomNode-lab/DevDoctor`.
