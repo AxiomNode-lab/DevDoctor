@@ -332,7 +332,7 @@ Third-party packages can add bootstrap tools through the `devdoctor.bootstrap_to
 mytools = "my_package.devdoctor:get_tools"
 ```
 
-Plugin detectors should be fast, local, non-destructive, and safe to run without root privileges.
+Plugin detectors should be fast, local, non-destructive, and safe to run without root privileges. [`examples/plugin`](examples/plugin/README.md) is a complete installable example (`pip install -e examples/plugin`, then `devdoctor search lazygit`).
 
 ## Release verification
 

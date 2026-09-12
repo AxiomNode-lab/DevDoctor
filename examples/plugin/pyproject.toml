@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "devdoctor-example-plugin"
+version = "0.1.0"
+description = "Example third-party tool catalog for DevDoctor."
+requires-python = ">=3.11"
+dependencies = ["devdoctor-workstation"]
+
+# DevDoctor discovers catalog plugins through this entry-point group. The
+# target is any callable returning ToolSpec objects (or a single ToolSpec).
+[project.entry-points."devdoctor.bootstrap_tools"]
+example = "devdoctor_example_plugin:get_tools"
+
+[tool.hatch.build.targets.wheel]
+packages = ["devdoctor_example_plugin"]
