@@ -89,3 +89,28 @@ def test_no_findings_is_said_in_one_line(monkeypatch: pytest.MonkeyPatch, tmp_pa
 
     assert "No problems found" in text
     assert "1 installed tool" in text
+
+
+def test_findings_panel_points_at_the_fix_command(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    text = _render(findings_panel(_inventory(monkeypatch, tmp_path)))
+
+    assert "devdoctor fix" in text
+
+
+def test_fix_is_an_alias_of_repair_apply() -> None:
+    from typer.testing import CliRunner
+
+    from devdoctor import entrypoint
+
+    app = entrypoint.build_app()
+    names = {command.name for command in app.registered_commands}
+    assert {"fix", "repair-apply"} <= names
+
+    runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb", "COLUMNS": "200"})
+    fix = runner.invoke(app, ["fix", "git"])
+    repair_apply = runner.invoke(app, ["repair-apply", "git"])
+
+    assert fix.exit_code == repair_apply.exit_code == 0
+    assert fix.output == repair_apply.output

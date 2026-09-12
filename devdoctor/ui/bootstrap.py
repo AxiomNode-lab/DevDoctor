@@ -246,7 +246,20 @@ def findings_panel(inventory: BootstrapInventory) -> Panel:
     broken = sum(1 for detection in findings if detection.health is HealthState.BROKEN)
     warnings = len(findings) - broken
     title = f"Findings · {broken} broken · {warnings} warning" + ("s" if warnings != 1 else "")
-    return Panel(table, title=title, border_style="red" if broken else "yellow", box=box.SIMPLE)
+    hint = Text.assemble(
+        ("Next: ", "bold"),
+        ("devdoctor fix", "path"),
+        " previews the repairs that have a rollback; add ",
+        ("--apply", "path"),
+        " to run them one at a time with confirmation.",
+        style="muted",
+    )
+    return Panel(
+        Group(table, hint),
+        title=title,
+        border_style="red" if broken else "yellow",
+        box=box.SIMPLE,
+    )
 
 
 def diff_table(diff: InventoryDiff) -> Table:

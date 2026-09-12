@@ -26,6 +26,7 @@ and this project uses semantic versioning.
 
 ### Added
 
+- `devdoctor fix`: alias of `repair-apply`, and the Findings panel now ends with the hint to run it; the guided, preview-first walk through repairs is discoverable from the diagnosis itself.
 - `devdoctor diff`: every full scan records a snapshot (`last-inventory.json` in the user state directory); `diff` rescans and reports tools that appeared or disappeared, health flips, version and path changes, and the PATH issue count, problems first. `--json`, `--exit-code`, `--keep-baseline`, and `--tools a,b` (scoped rescan that updates only those baseline entries). A read-only home never breaks a scan.
 - `examples/plugin`: an installable example catalog plugin (`devdoctor.bootstrap_tools` entry point) contributing `lazygit` and `tldr`, verified end to end in a clean environment.
 - `action.yml`: a composite GitHub Action (`uses: AxiomNode-lab/DevDoctor@main`) that runs `devdoctor project` against the caller's repository, writes the result to the job summary, exposes the JSON report path as an output, and honors `fail-on-mismatch`. The repository dogfoods it in `.github/workflows/project-check.yml`.

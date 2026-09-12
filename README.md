@@ -207,6 +207,7 @@ The repository bug-report form asks for this report when available and requests 
 | `devdoctor project [PATH]` | Compare supported project requirements with the current workstation. |
 | `devdoctor install [tools...]` | Preview or run distro-aware install plans. |
 | `devdoctor repair [tools...]` | Show repair evidence and recommendations. |
+| `devdoctor fix [tools...]` | Walk the Findings: preview each rollback-capable repair, `--apply` to run them one at a time with confirmation (alias of `repair-apply`). |
 | `devdoctor repair-apply [tools...]` | Preview or apply rollback-capable repair actions. |
 | `devdoctor repair-rollback TRANSACTION_ID` | Preview or apply a persisted rollback transaction. |
 | `devdoctor verify [tools...]` | Exit non-zero when selected tools need attention. |
