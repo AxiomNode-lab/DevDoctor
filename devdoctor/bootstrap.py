@@ -6,6 +6,7 @@ import os
 import shutil
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from importlib.metadata import EntryPoint, entry_points
@@ -379,9 +380,28 @@ def bootstrap_inventory(
         )
         specs = tuple(spec for spec in specs if spec.id in wanted)
     system = detect_system_context(specs=all_specs)
-    detections = tuple(detect_tool(spec, system=system) for spec in specs)
+    detections = detect_tools(specs, system=system)
     detections = _enrich_detections(detections, system=system)
     return BootstrapInventory(system=system, detections=detections, profiles=BOOTSTRAP_PROFILES)
+
+
+# Version probes are short subprocesses that mostly wait on the tool itself;
+# running them a few at a time turns a 10s cold scan into a ~2s one without
+# changing any result. Catalog order is preserved in the returned tuple.
+_PROBE_WORKERS = 8
+
+
+def detect_tools(
+    specs: Sequence[ToolSpec],
+    *,
+    system: Mapping[str, JsonValue],
+) -> tuple[ToolDetection, ...]:
+    """Detect every spec, probing versions concurrently, in catalog order."""
+
+    if len(specs) <= 1:
+        return tuple(detect_tool(spec, system=system) for spec in specs)
+    with ThreadPoolExecutor(max_workers=min(_PROBE_WORKERS, len(specs))) as pool:
+        return tuple(pool.map(lambda spec: detect_tool(spec, system=system), specs))
 
 
 def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping[str, JsonValue]:
@@ -712,8 +732,8 @@ def _enrich_detections(
     system: Mapping[str, JsonValue],
 ) -> tuple[ToolDetection, ...]:
     by_id = {detection.spec.id: detection for detection in detections}
-    enriched: list[ToolDetection] = []
-    for detection in detections:
+
+    def enrich(detection: ToolDetection) -> ToolDetection:
         dependency_status = _dependency_status(detection, by_id=by_id, system=system)
         recommendations = (
             *_generic_repair_recommendations(detection),
@@ -725,16 +745,20 @@ def _enrich_detections(
             dependency_status=dependency_status,
             recommendations=recommendations,
         )
-        enriched.append(
-            replace(
-                detection,
-                dependency_status=dependency_status,
-                repair_recommendations=recommendations,
-                health=health,
-                broken_installation=health is HealthState.BROKEN and bool(recommendations),
-            )
+        return replace(
+            detection,
+            dependency_status=dependency_status,
+            repair_recommendations=recommendations,
+            health=health,
+            broken_installation=health is HealthState.BROKEN and bool(recommendations),
         )
-    return tuple(enriched)
+
+    # Tool-specific checks (`docker info`, `git config`, `python -m pip`) only read
+    # the already-complete base detections, so each tool can be enriched independently.
+    if len(detections) <= 1:
+        return tuple(enrich(detection) for detection in detections)
+    with ThreadPoolExecutor(max_workers=min(_PROBE_WORKERS, len(detections))) as pool:
+        return tuple(pool.map(enrich, detections))
 
 
 def _dependency_status(
