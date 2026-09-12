@@ -154,6 +154,20 @@ devdoctor project . --json --no-fail
 
 See [Project-aware diagnostics](docs/PROJECT_DIAGNOSTICS.md) for the exact evidence and comparison contract.
 
+### GitHub Action
+
+The same check runs as a one-step action on any repository. It is read-only, prints the result to the job summary, and fails the job when a declared requirement is missing or mismatched (set `fail-on-mismatch: "false"` to only report):
+
+```yaml
+- uses: actions/checkout@v4
+- uses: AxiomNode-lab/DevDoctor@main
+  with:
+    path: .            # directory with the project manifests (default: .)
+    ref: main          # DevDoctor version to install: a tag or branch (default: main)
+```
+
+This repository runs it on itself in [`project-check.yml`](.github/workflows/project-check.yml).
+
 ## Better bug reports
 
 `devdoctor support` converts the privacy-scrubbed diagnostic snapshot into Markdown that can be reviewed and pasted into a GitHub issue:

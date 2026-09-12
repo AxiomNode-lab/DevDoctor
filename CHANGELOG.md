@@ -26,6 +26,7 @@ and this project uses semantic versioning.
 
 ### Added
 
+- `action.yml`: a composite GitHub Action (`uses: AxiomNode-lab/DevDoctor@main`) that runs `devdoctor project` against the caller's repository, writes the result to the job summary, exposes the JSON report path as an output, and honors `fail-on-mismatch`. The repository dogfoods it in `.github/workflows/project-check.yml`.
 - A **Findings** panel opens every report: each installed tool that is broken or has a warning, the problem, and the one action to take — the diagnosis before the inventory. When nothing is wrong it says so in one line.
 
 ### Changed
