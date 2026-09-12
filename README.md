@@ -365,14 +365,7 @@ When changing package mappings, package identity, manifest parsing, or safety po
 
 ## Roadmap
 
-- Qualify and publish the release candidate after the final commit passes the full matrix.
-- Configure the external PyPI Trusted Publisher for `devdoctor-workstation` and protected GitHub `pypi` environment.
-- Publish and validate a Homebrew tap instead of advertising a future command prematurely.
-- Fold the remaining entry-point wrappers (privacy scrubbing, release-safety confirmation) into the commands they guard.
-- Expand real-workstation evidence for Atomic/Bazzite and other advertised environments.
-- Expand project-aware parsing only through bounded formats and regression fixtures; do not execute project configuration.
-- Add more verified distro package mappings through contribution fixtures.
-- Publish an external plugin example and stable bootstrap/project JSON schema documentation.
+In order: publish to PyPI and cut a real release; `devdoctor diff` (what changed since the last scan); a guided, preview-first `devdoctor fix`; a stable JSON schema; recommended versions from project manifests; real Atomic/Bazzite host evidence; WSL/container-aware planning; shell-profile-aware PATH repair; version-manager awareness (nvm/pyenv/mise); localized output. Details and rationale in [ROADMAP.md](ROADMAP.md).
 
 ## FAQ
 
