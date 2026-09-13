@@ -65,10 +65,10 @@ DevDoctor does not execute supported install, update, uninstall, cache, self-upd
 
 ## Artifacts
 
-For `v1.2.0rc1` the expected Python artifacts are:
+For `v1.2.0` the expected Python artifacts are:
 
-- `devdoctor_workstation-1.2.0rc1.tar.gz`
-- `devdoctor_workstation-1.2.0rc1-py3-none-any.whl`
+- `devdoctor_workstation-1.2.0.tar.gz`
+- `devdoctor_workstation-1.2.0-py3-none-any.whl`
 
 Also include:
 

@@ -16,16 +16,16 @@ A qualified tagged release is designed to build one release payload and reuse it
 - SPDX 2.3 SBOM (`devdoctor.spdx.json`)
 - `SHA256SUMS`
 
-For `v1.2.0rc1`, the normalized Python artifacts must be:
+For `v1.2.0`, the normalized Python artifacts must be:
 
 ```text
-devdoctor_workstation-1.2.0rc1-py3-none-any.whl
-devdoctor_workstation-1.2.0rc1.tar.gz
+devdoctor_workstation-1.2.0-py3-none-any.whl
+devdoctor_workstation-1.2.0.tar.gz
 ```
 
 The release workflow validates formatting, lint, tests, package metadata, expected distribution filenames, and a clean wheel installation before the payload is uploaded.
 
-The tag name is also checked against the package version. A tag such as `v1.2.0rc1` must point at code whose package version is exactly `1.2.0rc1`.
+The tag name is also checked against the package version. A tag such as `v1.2.0` must point at code whose package version is exactly `1.2.0`.
 
 ## Build once, publish the tested artifacts
 
@@ -86,7 +86,7 @@ sh devdoctor-install.sh --yes
 The generic GitHub source mode is valid only after the requested GitHub Release exists:
 
 ```sh
-sh scripts/install.sh --source github --version 1.2.0rc1
+sh scripts/install.sh --source github --version 1.2.0
 ```
 
 Before a GitHub or PyPI release exists, install a development checkout directly from the repository instead of using a release installer.
@@ -117,7 +117,7 @@ The workflow creates:
 For a downloaded release artifact, GitHub CLI can be used to verify a repository attestation:
 
 ```sh
-gh attestation verify devdoctor_workstation-1.2.0rc1-py3-none-any.whl \
+gh attestation verify devdoctor_workstation-1.2.0-py3-none-any.whl \
   --repo AxiomNode-lab/DevDoctor
 ```
 
@@ -135,8 +135,8 @@ Do not advertise `brew install ...` until all of the following are true:
 - Python resources are handled correctly for the formula strategy, and
 - a clean Homebrew CI job installs and runs `devdoctor --version` successfully.
 
-## Release candidate policy
+## Release policy
 
-`v1.2.0rc1` is a prerelease. GitHub Release is configured to mark tags containing `rc` as prereleases.
+`v1.2.0` is a stable release. GitHub Release marks tags whose package version contains `a`, `b`, `rc`, or `dev` as prereleases automatically; a stable tag gets the "latest" pointer, which is what `install.sh --source github --version` and the README rely on.
 
-Promotion to a stable `v1.2.0` requires the current commit's full CI/release qualification, review of release-candidate feedback, and no unresolved high-severity mutation, package-manager-selection, installer, self-update, or distribution-identity regression.
+A tag is created only on a `main` commit whose full CI matrix (tests on Python 3.11–3.14, clean-wheel install, distro integration, benchmark budgets, CodeQL) is green.

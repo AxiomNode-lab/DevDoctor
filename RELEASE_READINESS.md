@@ -1,16 +1,16 @@
 # Release Readiness
 
-Date: 2026-08-27  
-Candidate: `1.2.0rc1`  
+Date: 2026-09-13  
+Release: `1.2.0`  
 Repository: `AxiomNode-lab/DevDoctor`  
 Python distribution: `devdoctor-workstation`  
 Executable: `devdoctor`
 
 ## Current decision
 
-**Do not tag `v1.2.0rc1` yet.**
+**Tag `v1.2.0` from `main` once this release PR is merged and its checks are green.**
 
-The release-candidate code and release pipeline are prepared, but the final PR head must run through the complete GitHub Actions matrix before a tag is created. Passing workflows from earlier commits remain useful evidence, but they do not qualify the current release commit after distribution metadata, installer, project diagnostics, support reporting, safety tests, memory budgets, and release workflow changed.
+Since the readiness review of 2026-08-27 the detection engine, install-plan catalog, planner policy, CLI, installer, and CI guards were reworked across PRs #15, #16, and #18 (see CHANGELOG). Every gate below is exercised by the CI matrix on the release commit itself: tests on Python 3.11–3.14, clean-wheel install, distro integration on Ubuntu/Fedora/Arch/openSUSE (including catalog package existence), benchmark budgets, and CodeQL.
 
 The distribution name was changed before first publication because `devdoctor-cli` is already used by another public project. DevDoctor keeps its product name and `devdoctor` console command; only the Python distribution identifier changes to `devdoctor-workstation`.
 
@@ -133,8 +133,8 @@ The exact commit that will be tagged must satisfy all of these gates.
 ### Release artifacts
 
 - [ ] Tag version matches package version.
-- [ ] `devdoctor_workstation-1.2.0rc1-py3-none-any.whl` is produced.
-- [ ] `devdoctor_workstation-1.2.0rc1.tar.gz` is produced.
+- [ ] `devdoctor_workstation-1.2.0-py3-none-any.whl` is produced.
+- [ ] `devdoctor_workstation-1.2.0.tar.gz` is produced.
 - [ ] Wheel and sdist are generated once by the release build job.
 - [ ] Clean-wheel validation uses the generated wheel.
 - [ ] Release wheel runs `project`, `support`, diagnostics, completion, self-update, and uninstall smoke checks.
@@ -144,7 +144,7 @@ The exact commit that will be tagged must satisfy all of these gates.
 - [ ] `SHA256SUMS` verifies successfully.
 - [ ] Provenance attestation succeeds.
 - [ ] SBOM attestation succeeds.
-- [ ] GitHub prerelease contains the expected payload.
+- [ ] GitHub release contains the expected payload.
 
 ## External setup gates
 
@@ -195,6 +195,6 @@ Project-manifest support similarly means only the documented fields/formats are 
 
 ## Promotion rule
 
-`v1.2.0rc1` may be tagged only when the current commit's required automated gates are green.
+`v1.2.0` may be tagged only when the current commit's required automated gates are green.
 
 `v1.2.0` stable requires the same gates plus review of release-candidate feedback and no unresolved high-severity regression in install, update, uninstall, repair, rollback, self-update, project diagnosis, privacy reporting, memory behavior, or package-manager selection.

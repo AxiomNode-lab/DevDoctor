@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "1.2.0rc1"
+__version__ = "1.2.0"
 __author__ = "AxiomNode"
 __copyright__ = "Copyright (c) 2026 AxiomNode"
 __license__ = "MIT"

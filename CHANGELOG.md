@@ -7,6 +7,10 @@ and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-13
+
+The first published DevDoctor release. Everything listed here was verified on a real Ubuntu 24.04 host and by CI on Ubuntu, Fedora, Arch, and openSUSE containers; `1.2.0rc1` below was never published.
+
 ### Fixed
 
 - Python and pip are detected on hosts that only ship `python3`/`pip3` (Debian, Ubuntu): catalog tools can declare alternate command names via `ToolSpec.executable_aliases`.

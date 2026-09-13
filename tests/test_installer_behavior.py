@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts" / "install.sh"
-VERSION = "1.2.0rc1"
+VERSION = "1.2.0"
 
 
 def _write_fake_python(fake_bin: Path) -> None:
@@ -37,21 +37,21 @@ if [ "${1:-}" = "-m" ] && [ "${2:-}" = "pip" ]; then
 #!/bin/sh
 case "$0" in
   */envs/*)
-    echo "DevDoctor 1.2.0rc1"
+    echo "DevDoctor 1.2.0"
     exit 0
     ;;
 esac
 if [ "${DEVDOCTOR_FAKE_FAIL_FINAL:-0}" = "1" ]; then
   exit 42
 fi
-echo "DevDoctor 1.2.0rc1"
+echo "DevDoctor 1.2.0"
 DEVDOCTOR
   chmod +x "$BIN_DIR/devdoctor"
   exit 0
 fi
 
 if [ "${1:-}" = "-c" ]; then
-  echo "1.2.0rc1"
+  echo "1.2.0"
   exit 0
 fi
 
