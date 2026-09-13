@@ -21,10 +21,13 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Measure latency and peak RSS
         run: |
+          # Aggregate RSS sums every probe child alive at once (4 workers by
+          # default); self RSS is DevDoctor's own process and keeps the old bar.
           python scripts/benchmark.py \
             --iterations 5 \
             --max-startup-rss-mib 128 \
-            --max-scan-rss-mib 192 \
+            --max-scan-rss-mib 256 \
+            --max-scan-self-rss-mib 128 \
             --output benchmark.json
       - name: Upload performance and memory baseline
         uses: actions/upload-artifact@v7
