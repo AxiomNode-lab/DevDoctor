@@ -219,6 +219,7 @@ def register_repair_transaction_commands(app: typer.Typer) -> None:
         return
     _REGISTERED = True
 
+    @app.command("fix")
     @app.command("repair-apply")
     def repair_apply(
         tools: list[str] | None = typer.Argument(
@@ -230,7 +231,7 @@ def register_repair_transaction_commands(app: typer.Typer) -> None:
         ),
         yes: bool = typer.Option(False, "--yes", "-y", help="Skip per-action confirmation."),
     ) -> None:
-        """Preview or execute rollback-capable repair actions."""
+        """Walk the Findings: preview each rollback-capable repair, apply with --apply."""
 
         tool_ids = tuple(tools or ())
         _validate_tool_ids(tool_ids)

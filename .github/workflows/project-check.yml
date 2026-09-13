@@ -1,0 +1,20 @@
+name: Project check (dogfood)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  devdoctor-project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Runs this repository's own action against this repository: the
+      # pyproject.toml requirement (python >= 3.11) must be satisfied here.
+      - uses: ./
+        with:
+          path: .
+          ref: ${{ github.head_ref || github.ref_name }}

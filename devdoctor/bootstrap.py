@@ -6,6 +6,7 @@ import os
 import shutil
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from importlib.metadata import EntryPoint, entry_points
@@ -23,6 +24,7 @@ from devdoctor.path_analysis import analyze_path, executable_paths
 from devdoctor.utils import get_hostname, get_username, parse_version, read_os_release, run_command
 
 BOOTSTRAP_TOOL_ENTRY_POINT_GROUP = "devdoctor.bootstrap_tools"
+INVENTORY_SCHEMA_VERSION = 1
 
 
 class BootstrapCategory(StrEnum):
@@ -341,6 +343,8 @@ class BootstrapInventory:
         """Convert the inventory to JSON data."""
 
         return {
+            # Contract: docs/schema/inventory.schema.json. Bump only for breaking changes.
+            "schema_version": INVENTORY_SCHEMA_VERSION,
             "system": self.system,
             "summary": {
                 "total": len(self.detections),
@@ -379,9 +383,46 @@ def bootstrap_inventory(
         )
         specs = tuple(spec for spec in specs if spec.id in wanted)
     system = detect_system_context(specs=all_specs)
-    detections = tuple(detect_tool(spec, system=system) for spec in specs)
+    detections = detect_tools(specs, system=system)
     detections = _enrich_detections(detections, system=system)
     return BootstrapInventory(system=system, detections=detections, profiles=BOOTSTRAP_PROFILES)
+
+
+# Version probes are short subprocesses that mostly wait on the tool itself;
+# running a few at a time turns a 10s cold scan into a ~1s one without changing
+# any result. Four is the default: every probe alive at once adds its own RSS
+# (a `node --version` or `python -m pip` is tens of MiB), so more workers buy
+# little time and a visibly larger memory spike. DEVDOCTOR_PROBE_WORKERS=1 makes
+# the scan sequential on constrained hosts. Catalog order is always preserved.
+_DEFAULT_PROBE_WORKERS = 4
+_MAX_PROBE_WORKERS = 16
+
+
+def probe_workers() -> int:
+    """How many probes may run at once: DEVDOCTOR_PROBE_WORKERS, bounded, default 4."""
+
+    raw = os.environ.get("DEVDOCTOR_PROBE_WORKERS", "")
+    try:
+        value = int(raw)
+    except ValueError:
+        return _DEFAULT_PROBE_WORKERS
+    if value < 1:
+        return _DEFAULT_PROBE_WORKERS
+    return min(value, _MAX_PROBE_WORKERS)
+
+
+def detect_tools(
+    specs: Sequence[ToolSpec],
+    *,
+    system: Mapping[str, JsonValue],
+) -> tuple[ToolDetection, ...]:
+    """Detect every spec, probing versions concurrently, in catalog order."""
+
+    workers = min(probe_workers(), len(specs))
+    if workers <= 1:
+        return tuple(detect_tool(spec, system=system) for spec in specs)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return tuple(pool.map(lambda spec: detect_tool(spec, system=system), specs))
 
 
 def detect_system_context(*, specs: Iterable[ToolSpec] | None = None) -> Mapping[str, JsonValue]:
@@ -461,6 +502,7 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
     )
     config_locations = _existing_config_locations(spec.config_paths)
     package_manager, package_name = _owning_package(path)
+    alternate_paths = _alternate_paths(all_paths, executable_path)
     missing_dependencies = tuple(
         dependency for dependency in spec.dependencies if shutil.which(dependency) is None
     )
@@ -477,11 +519,13 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
         package_manager=package_manager,
         package_name=package_name,
         config_locations=config_locations,
-        alternate_paths=_alternate_paths(all_paths, executable_path),
+        alternate_paths=alternate_paths,
         installation_method=(
             compound_probe.installation_method
             if compound_probe is not None
-            else _installation_method(path, package_manager=package_manager)
+            else _installation_method(
+                path, package_manager=package_manager, alternate_paths=alternate_paths
+            )
         ),
         health=health,
         broken_installation=broken,
@@ -528,7 +572,9 @@ def _standard_install_plan(
     package = spec.packages.get(manager)
     if package is None:
         return None
-    return _plan_for_manager(spec, manager=manager, package=package, reason=manager_reason)
+    return _plan_for_manager(
+        spec, manager=manager, package=package, reason=manager_reason, system=system
+    )
 
 
 def _atomic_install_plan(
@@ -551,6 +597,7 @@ def _atomic_install_plan(
                 "Atomic/image-based host: prefer a mapped user-space or package-scoped manager "
                 "before layering the base image."
             ),
+            system=system,
         )
         if plan is not None:
             return plan
@@ -567,6 +614,7 @@ def _atomic_install_plan(
                     "rpm-ostree layering for the Fedora package mapping; DNF host mutation is "
                     "intentionally suppressed."
                 ),
+                system=system,
             )
     return None
 
@@ -599,6 +647,7 @@ def _nix_fallback_plan(
         reason=(
             "Nix is installed and DevDoctor has an explicit user-profile mapping for this tool."
         ),
+        system=system,
     )
     if plan is None:
         return None
@@ -615,10 +664,17 @@ def _plan_for_manager(
     manager: str,
     package: str,
     reason: str,
+    system: Mapping[str, JsonValue],
 ) -> InstallPlan | None:
     command, dry_run, rollback = _manager_commands(manager, package)
     if command is None:
         return None
+    command = without_sudo(command, system)
+    rollback = without_sudo(rollback, system) if rollback else rollback
+    explanation = f"Install {spec.title} using {manager} package `{package}`."
+    requires_sudo = _requires_sudo(command)
+    if requires_sudo and system.get("can_sudo") is False:
+        explanation += " Needs root, but sudo is not available on this host."
     return InstallPlan(
         tool_id=spec.id,
         tool_title=spec.title,
@@ -629,11 +685,25 @@ def _plan_for_manager(
         dry_run_command=dry_run,
         verify_command=_verification_command(spec),
         rollback_command=rollback,
-        explanation=f"Install {spec.title} using {manager} package `{package}`.",
+        explanation=explanation,
         risk=_install_risk(manager),
-        requires_sudo=_requires_sudo(command),
+        requires_sudo=requires_sudo,
         dependencies=tuple(dependency.tool_id for dependency in spec.tool_dependencies),
     )
+
+
+def without_sudo(command: tuple[str, ...], system: Mapping[str, JsonValue]) -> tuple[str, ...]:
+    """Drop a leading ``sudo`` when already root (containers often have no sudo at all)."""
+
+    if command and command[0] == "sudo" and system.get("is_root") is True:
+        return command[1:]
+    return command
+
+
+def _systemd_running() -> bool:
+    """True when systemd is the running init, not merely installed (containers, WSL1)."""
+
+    return Path("/run/systemd/system").is_dir()
 
 
 def profile_by_id(profile_id: str) -> BootstrapProfile | None:
@@ -712,8 +782,8 @@ def _enrich_detections(
     system: Mapping[str, JsonValue],
 ) -> tuple[ToolDetection, ...]:
     by_id = {detection.spec.id: detection for detection in detections}
-    enriched: list[ToolDetection] = []
-    for detection in detections:
+
+    def enrich(detection: ToolDetection) -> ToolDetection:
         dependency_status = _dependency_status(detection, by_id=by_id, system=system)
         recommendations = (
             *_generic_repair_recommendations(detection),
@@ -725,16 +795,21 @@ def _enrich_detections(
             dependency_status=dependency_status,
             recommendations=recommendations,
         )
-        enriched.append(
-            replace(
-                detection,
-                dependency_status=dependency_status,
-                repair_recommendations=recommendations,
-                health=health,
-                broken_installation=health is HealthState.BROKEN and bool(recommendations),
-            )
+        return replace(
+            detection,
+            dependency_status=dependency_status,
+            repair_recommendations=recommendations,
+            health=health,
+            broken_installation=health is HealthState.BROKEN and bool(recommendations),
         )
-    return tuple(enriched)
+
+    # Tool-specific checks (`docker info`, `git config`, `python -m pip`) only read
+    # the already-complete base detections, so each tool can be enriched independently.
+    workers = min(probe_workers(), len(detections))
+    if workers <= 1:
+        return tuple(enrich(detection) for detection in detections)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return tuple(pool.map(enrich, detections))
 
 
 def _dependency_status(
@@ -856,11 +931,50 @@ def _base_health(*, installed: bool, broken: bool) -> HealthState:
     return HealthState.READY
 
 
-def _installation_method(path: str | None, *, package_manager: str | None) -> str | None:
+# Version managers keep several installs of one tool side by side and expose the
+# active one through PATH order or shims. Paths are matched relative to $HOME.
+_VERSION_MANAGER_DIRS: tuple[tuple[str, str], ...] = (
+    ("nvm", ".nvm/versions/"),
+    ("pyenv", ".pyenv/versions/"),
+    ("pyenv", ".pyenv/shims/"),
+    ("rbenv", ".rbenv/versions/"),
+    ("rbenv", ".rbenv/shims/"),
+    ("asdf", ".asdf/installs/"),
+    ("asdf", ".asdf/shims/"),
+    ("mise", ".local/share/mise/installs/"),
+    ("mise", ".local/share/mise/shims/"),
+    ("sdkman", ".sdkman/candidates/"),
+    ("rustup", ".cargo/bin/"),
+)
+
+
+def version_manager_for(path: str | None) -> str | None:
+    """Name the version manager that owns ``path``, or None for an unmanaged location."""
+
+    if path is None:
+        return None
+    home = os.path.expanduser("~")
+    normalized = os.path.normpath(path)
+    for manager, relative in _VERSION_MANAGER_DIRS:
+        if normalized.startswith(os.path.join(home, relative)):
+            return manager
+    return None
+
+
+def _installation_method(
+    path: str | None,
+    *,
+    package_manager: str | None,
+    alternate_paths: Sequence[str] = (),
+) -> str | None:
     if package_manager:
         return package_manager
     if path is None:
         return None
+    manager = version_manager_for(path)
+    if manager is not None:
+        managed = 1 + sum(1 for other in alternate_paths if version_manager_for(other) == manager)
+        return f"{manager} ({managed} versions installed)" if managed > 1 else manager
     normalized = path.lower()
     home = str(Path.home()).lower()
     if ".linuxbrew" in normalized or "/homebrew/" in normalized:
@@ -928,13 +1042,21 @@ def _generic_repair_recommendations(
                 manual_action=f"Install `{dependency}` with your preferred package manager.",
             )
         )
-    if detection.alternate_paths:
+    manager = version_manager_for(detection.executable_path)
+    # Other versions under the same version manager are that manager's job, not a
+    # duplicate installation; only copies outside it are worth a look.
+    stray = tuple(
+        path
+        for path in detection.alternate_paths
+        if manager is None or version_manager_for(path) != manager
+    )
+    if stray:
         recommendations.append(
             RepairRecommendation(
                 problem="Duplicate installation detected",
                 reason=(
                     f"`{detection.spec.executable}` appears in multiple PATH locations: "
-                    f"{', '.join(detection.alternate_paths)}"
+                    f"{', '.join(stray)}"
                 ),
                 risk="low",
                 command=None,
@@ -1021,7 +1143,7 @@ def _docker_recommendations(detection: ToolDetection) -> tuple[RepairRecommendat
                 manual_action="Log out and back in after changing Docker group membership.",
             ),
         )
-    if shutil.which("systemctl"):
+    if shutil.which("systemctl") and _systemd_running():
         return (
             RepairRecommendation(
                 problem="Docker daemon is not running",
@@ -1036,7 +1158,10 @@ def _docker_recommendations(detection: ToolDetection) -> tuple[RepairRecommendat
         RepairRecommendation(
             problem="Docker daemon is unavailable",
             reason=(
-                "`docker info` failed, and no systemctl command is available for an "
+                "`docker info` failed, and systemd is not running here (a container or "
+                "WSL without systemd), so there is no service to start automatically."
+                if shutil.which("systemctl")
+                else "`docker info` failed, and no systemctl command is available for an "
                 "automatic service start."
             ),
             risk="medium",

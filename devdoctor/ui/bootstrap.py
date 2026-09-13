@@ -19,6 +19,7 @@ from devdoctor.bootstrap import (
     InstallPlan,
     ToolDetection,
 )
+from devdoctor.snapshots import InventoryDiff
 
 
 def bootstrap_group(
@@ -30,6 +31,7 @@ def bootstrap_group(
 
     renderables: list[object] = [
         bootstrap_header(inventory),
+        findings_panel(inventory),
         system_context_panel(inventory),
     ]
     path_panel = path_analysis_panel(inventory)
@@ -195,6 +197,125 @@ def install_plans_table(plans: Iterable[InstallPlan]) -> Table:
             " ".join(plan.dry_run_command) if plan.dry_run_command else "",
         )
     return table
+
+
+def findings_panel(inventory: BootstrapInventory) -> Panel:
+    """The doctor's note: every installed tool with a problem, and the one thing to do.
+
+    Shown first so a reader gets the diagnosis before the inventory. Missing
+    tools are not findings; the category tables and install plans cover them.
+    """
+
+    findings = [
+        detection
+        for detection in inventory.detections
+        if detection.health in {HealthState.BROKEN, HealthState.WARNING}
+    ]
+    installed = sum(1 for detection in inventory.detections if detection.installed)
+    if not findings:
+        noun = "installed tool" if installed == 1 else "installed tools"
+        return Panel(
+            Text.assemble(("✓ ", "success"), f"No problems found in {installed} {noun}."),
+            title="Findings",
+            border_style="green",
+            box=box.SIMPLE,
+        )
+
+    table = Table(box=box.SIMPLE, header_style="bold white", expand=True, show_edge=False)
+    table.add_column("", width=1, no_wrap=True)
+    table.add_column("Tool", min_width=12, ratio=1, overflow="fold")
+    table.add_column("Problem", ratio=3, overflow="fold")
+    table.add_column("Do this", ratio=3, overflow="fold")
+    for detection in findings:
+        problems = _unique(
+            *(recommendation.problem for recommendation in detection.repair_recommendations),
+            *detection.path_issues,
+            *detection.permission_issues,
+        )
+        actions = _unique(
+            recommendation.command_text
+            for recommendation in detection.repair_recommendations
+            if recommendation.command_text
+        )
+        table.add_row(
+            _status_icon(detection),
+            Text.assemble(detection.spec.title, ("\n" + detection.health.value, "dim")),
+            "\n".join(problems) or detection.health.value,
+            "\n".join(actions) or "Review the details below.",
+        )
+    broken = sum(1 for detection in findings if detection.health is HealthState.BROKEN)
+    warnings = len(findings) - broken
+    title = f"Findings · {broken} broken · {warnings} warning" + ("s" if warnings != 1 else "")
+    hint = Text.assemble(
+        ("Next: ", "bold"),
+        ("devdoctor fix", "path"),
+        " previews the repairs that have a rollback; add ",
+        ("--apply", "path"),
+        " to run them one at a time with confirmation.",
+        style="muted",
+    )
+    return Panel(
+        Group(table, hint),
+        title=title,
+        border_style="red" if broken else "yellow",
+        box=box.SIMPLE,
+    )
+
+
+def diff_table(diff: InventoryDiff) -> Table:
+    """Render what changed since the last snapshot, problems first."""
+
+    since = diff.since or "the last scan"
+    table = Table(
+        title=f"Changes since {since}",
+        box=box.SIMPLE,
+        border_style="cyan",
+        header_style="bold white",
+        expand=True,
+    )
+    table.add_column("", width=1, no_wrap=True)
+    table.add_column("Tool", min_width=12, ratio=1, overflow="fold")
+    table.add_column("Change", no_wrap=True)
+    table.add_column("Before", ratio=2, overflow="fold")
+    table.add_column("After", ratio=2, overflow="fold")
+    icons = {
+        "disappeared": Text("✗", style="error"),
+        "health": Text("!", style="warning"),
+        "version": Text("↑", style="path"),
+        "path": Text("→", style="path"),
+        "appeared": Text("✓", style="success"),
+    }
+    for entry in diff.entries:
+        table.add_row(
+            icons.get(entry.kind, Text("·")),
+            entry.title,
+            entry.kind,
+            entry.before or "—",
+            entry.after or "—",
+        )
+    before_issues, after_issues = diff.path_issues
+    if before_issues != after_issues:
+        table.add_row(
+            Text("!", style="warning")
+            if after_issues > before_issues
+            else Text("✓", style="success"),
+            "PATH issues",
+            "path",
+            str(before_issues),
+            str(after_issues),
+        )
+    return table
+
+
+def _unique(*items: str | Iterable[str]) -> list[str]:
+    """Flatten the arguments and drop repeats while keeping first-seen order."""
+
+    seen: list[str] = []
+    for item in items:
+        for value in [item] if isinstance(item, str) else item:
+            if value and value not in seen:
+                seen.append(value)
+    return seen
 
 
 def repair_suggestions_table(detections: Iterable[ToolDetection]) -> Table:

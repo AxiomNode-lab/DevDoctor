@@ -21,6 +21,8 @@ class PathIssue:
     problem: str
     recommendation: str
     export_command: str | None = None
+    # Shell profile lines that mention this entry: (file, 1-based line), read-only.
+    sources: tuple[tuple[str, int], ...] = ()
 
     def to_dict(self) -> dict[str, JsonValue]:
         """Convert the issue to JSON data."""
@@ -31,6 +33,7 @@ class PathIssue:
             "problem": self.problem,
             "recommendation": self.recommendation,
             "export_command": self.export_command,
+            "sources": [{"file": file, "line": line} for file, line in self.sources],
         }
 
 
@@ -110,21 +113,29 @@ def analyze_path(
 
         path = Path(entry).expanduser()
         if counter[entry] > 1:
+            sources = path_entry_sources(entry, home=home_dir)
             issues.append(
                 PathIssue(
                     kind="duplicate_entry",
                     path=entry,
                     problem="PATH contains this directory more than once.",
-                    recommendation="Keep the first occurrence and remove later duplicates.",
+                    recommendation=_with_sources(
+                        "Keep the first occurrence and remove later duplicates.", sources
+                    ),
+                    sources=sources,
                 )
             )
         if not path.exists():
+            sources = path_entry_sources(entry, home=home_dir)
             issues.append(
                 PathIssue(
                     kind="missing_directory",
                     path=entry,
                     problem="PATH entry does not exist.",
-                    recommendation="Create the directory or remove it from PATH.",
+                    recommendation=_with_sources(
+                        "Create the directory or remove it from PATH.", sources
+                    ),
+                    sources=sources,
                 )
             )
             removable.add(entry)
@@ -230,6 +241,60 @@ def _common_user_bins(home: Path) -> tuple[Path, ...]:
         home / ".bun/bin",
         home / ".deno/bin",
     )
+
+
+# Files a login or interactive shell reads, in the order they usually apply.
+_PROFILE_FILES: tuple[str, ...] = (
+    "/etc/environment",
+    "/etc/profile",
+    ".profile",
+    ".bash_profile",
+    ".bash_login",
+    ".bashrc",
+    ".zprofile",
+    ".zshenv",
+    ".zshrc",
+    ".config/fish/config.fish",
+)
+
+
+def path_entry_sources(entry: str, *, home: Path | None = None) -> tuple[tuple[str, int], ...]:
+    """Return ``(file, line)`` pairs of shell profile lines that mention a PATH entry.
+
+    Matches the literal directory and its ``$HOME``/``~`` spellings. Nothing is
+    parsed or executed; this only tells the user where to look.
+    """
+
+    home_dir = home or Path.home()
+    home_text = str(home_dir)
+    spellings = {entry}
+    if entry.startswith(home_text + "/"):
+        tail = entry[len(home_text) :]
+        spellings.update({f"$HOME{tail}", f"${{HOME}}{tail}", f"~{tail}"})
+    candidates = [
+        Path(name) if name.startswith("/") else home_dir / name for name in _PROFILE_FILES
+    ]
+    candidates.extend(sorted(Path("/etc/profile.d").glob("*.sh")))
+    found: list[tuple[str, int]] = []
+    for file in candidates:
+        try:
+            lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for number, line in enumerate(lines, start=1):
+            if line.lstrip().startswith("#"):
+                continue
+            if any(spelling in line for spelling in spellings):
+                found.append((str(file), number))
+    return tuple(found)
+
+
+def _with_sources(recommendation: str, sources: tuple[tuple[str, int], ...]) -> str:
+    if not sources:
+        return recommendation
+    where = ", ".join(f"{file}:{line}" for file, line in sources[:3])
+    more = f" (+{len(sources) - 3} more)" if len(sources) > 3 else ""
+    return f"{recommendation} Set in {where}{more}."
 
 
 def _cleanup_export_command(entries: Iterable[str], removable: set[str]) -> str | None:

@@ -1,0 +1,67 @@
+name: "DevDoctor project check"
+description: >-
+  Compare the toolchain a repository declares (pyproject.toml, package.json,
+  .tool-versions, go.mod, Cargo.toml, Docker/Compose manifests, ...) with what
+  the runner actually has. Read-only: never installs or changes anything.
+author: AxiomNode
+branding:
+  icon: activity
+  color: blue
+
+inputs:
+  path:
+    description: Directory whose project manifests are checked.
+    required: false
+    default: "."
+  fail-on-mismatch:
+    description: Fail the step when a declared requirement is missing or mismatched.
+    required: false
+    default: "true"
+  ref:
+    description: DevDoctor git ref to install (a tag such as v1.2.0 or a branch).
+    required: false
+    default: "main"
+  python-version:
+    description: Python used to run DevDoctor (3.11 or newer).
+    required: false
+    default: "3.12"
+
+outputs:
+  report:
+    description: Path to the JSON report written by `devdoctor project --json`.
+    value: ${{ steps.check.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install DevDoctor
+      shell: bash
+      run: |
+        python -m pip install --quiet "git+https://github.com/AxiomNode-lab/DevDoctor.git@${{ inputs.ref }}"
+        devdoctor --version
+
+    - name: Check project requirements against this runner
+      id: check
+      shell: bash
+      run: |
+        set -o pipefail
+        report="${RUNNER_TEMP}/devdoctor-project.json"
+        extra=()
+        if [ "${{ inputs.fail-on-mismatch }}" != "true" ]; then
+          extra+=(--no-fail)
+        fi
+        status=0
+        devdoctor project "${{ inputs.path }}" --json "${extra[@]}" > "$report" || status=$?
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        {
+          echo "### DevDoctor project check"
+          echo
+          echo '```'
+          devdoctor project "${{ inputs.path }}" --no-fail || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        exit "$status"

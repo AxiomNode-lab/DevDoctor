@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AxiomNode-lab/DevDoctor/blob/main/docs/schema/project.schema.json",
+  "title": "DevDoctor project check",
+  "description": "Output of `devdoctor project <path> --json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_name",
+    "sources",
+    "checks",
+    "warnings",
+    "blocking"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "project_name": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tool_id",
+          "status",
+          "installed",
+          "installed_version",
+          "constraint",
+          "source",
+          "message"
+        ],
+        "properties": {
+          "tool_id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "missing",
+              "mismatch",
+              "unknown"
+            ]
+          },
+          "installed": {
+            "type": "boolean"
+          },
+          "installed_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "constraint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blocking": {
+      "type": "boolean"
+    }
+  }
+}

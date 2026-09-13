@@ -154,6 +154,36 @@ devdoctor project . --json --no-fail
 
 See [Project-aware diagnostics](docs/PROJECT_DIAGNOSTICS.md) for the exact evidence and comparison contract.
 
+### GitHub Action
+
+The same check runs as a one-step action on any repository. It is read-only, prints the result to the job summary, and fails the job when a declared requirement is missing or mismatched (set `fail-on-mismatch: "false"` to only report):
+
+```yaml
+- uses: actions/checkout@v4
+- uses: AxiomNode-lab/DevDoctor@main
+  with:
+    path: .            # directory with the project manifests (default: .)
+    ref: main          # DevDoctor version to install: a tag or branch (default: main)
+```
+
+This repository runs it on itself in [`project-check.yml`](.github/workflows/project-check.yml).
+
+## What changed since yesterday?
+
+Every full scan (`devdoctor` with no selection) records a small snapshot in the user state directory. `devdoctor diff` rescans and reports what changed against it — tools that appeared or disappeared, health flips, version changes, PATH issue count — then makes the new scan the baseline:
+
+```text
+$ devdoctor diff
+                       Changes since 2026-09-12T14:47:45+00:00
+      Tool          Change        Before             After
+  ✗   Node.js       disappeared   warning 20.20.2    —
+  !   pip           health        ready              broken
+  ↑   Git           version       2.43.0             2.45.0
+  ✓   PATH issues   path          32                 2
+```
+
+`--json` for scripts, `--exit-code` to exit 1 when anything changed (like `git diff`), `--keep-baseline` to compare without recording, `--tools git,node` to rescan a subset and update only those entries.
+
 ## Better bug reports
 
 `devdoctor support` converts the privacy-scrubbed diagnostic snapshot into Markdown that can be reviewed and pasted into a GitHub issue:
@@ -177,9 +207,11 @@ The repository bug-report form asks for this report when available and requests 
 | `devdoctor project [PATH]` | Compare supported project requirements with the current workstation. |
 | `devdoctor install [tools...]` | Preview or run distro-aware install plans. |
 | `devdoctor repair [tools...]` | Show repair evidence and recommendations. |
+| `devdoctor fix [tools...]` | Walk the Findings: preview each rollback-capable repair, `--apply` to run them one at a time with confirmation (alias of `repair-apply`). |
 | `devdoctor repair-apply [tools...]` | Preview or apply rollback-capable repair actions. |
 | `devdoctor repair-rollback TRANSACTION_ID` | Preview or apply a persisted rollback transaction. |
 | `devdoctor verify [tools...]` | Exit non-zero when selected tools need attention. |
+| `devdoctor diff` | Show what changed since the last full scan (appeared, disappeared, health, version, PATH issues). |
 | `devdoctor search QUERY` | Search the local tool catalog. |
 | `devdoctor manager-conflicts` | Report suspicious package-manager overlap. |
 | `devdoctor path-conflicts [executables...]` | Report duplicate/version/ownership PATH conflicts. |
@@ -244,7 +276,7 @@ Applied actions are recorded in a transaction journal. `repair-rollback` require
 
 ## PATH and package ownership
 
-The PATH analyzer reports empty entries, duplicates, missing directories, non-searchable directories, common user binary directories that are not exported, and shadowed executables.
+The PATH analyzer reports empty entries, duplicates, missing directories, non-searchable directories, common user binary directories that are not exported, and shadowed executables. For a missing or duplicate entry it names the shell profile lines that set it (`~/.bashrc:45`, `/etc/environment:1`) and emits one combined cleanup `export PATH=…` line; it never edits those files.
 
 `path-conflicts` adds bounded version and package-ownership probes for duplicate executable names. `uninstall` uses a stricter rule: it refuses removal unless the executable owner can be matched to the catalog package. On Atomic systems, RPM ownership by itself is not considered proof that a package was rpm-ostree layered.
 
@@ -269,7 +301,7 @@ devdoctor export json --output inventory.json
 devdoctor export markdown --output inventory.md
 ```
 
-JSON is the machine-readable inventory format. Markdown is useful for issues, handoffs, and onboarding notes. HTML is a standalone local report.
+JSON is the machine-readable inventory format and is a contract: [`docs/schema/`](docs/schema/) holds JSON Schemas for the inventory, `project`, and `diff` payloads, each carrying a `schema_version` that changes only for breaking changes ([policy](docs/JSON_SCHEMA.md)). Markdown is useful for issues, handoffs, and onboarding notes. HTML is a standalone local report.
 
 ## Safety model
 
@@ -318,7 +350,7 @@ Third-party packages can add bootstrap tools through the `devdoctor.bootstrap_to
 mytools = "my_package.devdoctor:get_tools"
 ```
 
-Plugin detectors should be fast, local, non-destructive, and safe to run without root privileges.
+Plugin detectors should be fast, local, non-destructive, and safe to run without root privileges. [`examples/plugin`](examples/plugin/README.md) is a complete installable example (`pip install -e examples/plugin`, then `devdoctor search lazygit`).
 
 ## Release verification
 
@@ -351,14 +383,7 @@ When changing package mappings, package identity, manifest parsing, or safety po
 
 ## Roadmap
 
-- Qualify and publish the release candidate after the final commit passes the full matrix.
-- Configure the external PyPI Trusted Publisher for `devdoctor-workstation` and protected GitHub `pypi` environment.
-- Publish and validate a Homebrew tap instead of advertising a future command prematurely.
-- Fold the remaining entry-point wrappers (privacy scrubbing, release-safety confirmation) into the commands they guard.
-- Expand real-workstation evidence for Atomic/Bazzite and other advertised environments.
-- Expand project-aware parsing only through bounded formats and regression fixtures; do not execute project configuration.
-- Add more verified distro package mappings through contribution fixtures.
-- Publish an external plugin example and stable bootstrap/project JSON schema documentation.
+In order: publish to PyPI and cut a real release; `devdoctor diff` (what changed since the last scan); a guided, preview-first `devdoctor fix`; a stable JSON schema; recommended versions from project manifests; real Atomic/Bazzite host evidence; WSL/container-aware planning; shell-profile-aware PATH repair; version-manager awareness (nvm/pyenv/mise); localized output. Details and rationale in [ROADMAP.md](ROADMAP.md).
 
 ## FAQ
 
@@ -381,6 +406,7 @@ No. DevDoctor is intentionally Linux-first.
 
 - [CLI reference](docs/CLI_REFERENCE.md)
 - [Project-aware diagnostics](docs/PROJECT_DIAGNOSTICS.md)
+- [JSON output contract](docs/JSON_SCHEMA.md)
 - [Usage](docs/USAGE.md)
 - [Checks and catalog reference](docs/CHECKS.md)
 - [Distribution support evidence](docs/SUPPORTED_DISTROS.md)

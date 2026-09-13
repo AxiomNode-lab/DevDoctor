@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AxiomNode-lab/DevDoctor/blob/main/docs/schema/diff.schema.json",
+  "title": "DevDoctor diff",
+  "description": "Output of `devdoctor diff --json`. When no baseline existed, `baseline` is true and there are no entries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "since",
+    "changed",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "since": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "changed": {
+      "type": "boolean"
+    },
+    "baseline": {
+      "type": "boolean"
+    },
+    "path_issues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before",
+        "after"
+      ],
+      "properties": {
+        "before": {
+          "type": "integer"
+        },
+        "after": {
+          "type": "integer"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tool_id",
+          "title",
+          "kind",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "tool_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "appeared",
+              "disappeared",
+              "health",
+              "version",
+              "path"
+            ]
+          },
+          "before": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "after": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
