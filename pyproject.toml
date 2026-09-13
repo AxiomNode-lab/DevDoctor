@@ -57,7 +57,7 @@ dev = [
   "pyyaml>=6.0.1",
   "jsonschema>=4.23.0",
   "ruff>=0.6.0",
-  "twine>=5.1.0",
+  "twine>=6.2.0",
 ]
 
 [project.urls]
