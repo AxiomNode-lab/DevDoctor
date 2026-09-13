@@ -16,7 +16,7 @@ body:
     attributes:
       label: DevDoctor version
       description: Run `devdoctor --version`.
-      placeholder: "1.2.0rc1"
+      placeholder: "1.2.0"
     validations:
       required: true
   - type: input

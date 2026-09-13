@@ -36,7 +36,7 @@ The demo is generated from real command output. See [assets/screenshots](assets/
 ```text
 $ devdoctor check --profile devops --missing
 
-DevDoctor  v1.2.0rc1          4 installed  7 missing  2 warnings  0 broken
+DevDoctor  v1.2.0          4 installed  7 missing  2 warnings  0 broken
 Linux developer workstation bootstrap
 
 Host
@@ -354,19 +354,19 @@ Plugin detectors should be fast, local, non-destructive, and safe to run without
 
 ## Release verification
 
-The `v1.2.0rc1` release pipeline is designed to build the Python distributions once, validate the clean wheel, generate `SHA256SUMS` and an SPDX 2.3 SBOM, create provenance/SBOM attestations, and then reuse those tested artifacts for GitHub Release and optional PyPI Trusted Publishing.
+The release pipeline builds the Python distributions once, validates the clean wheel, generates `SHA256SUMS` and an SPDX 2.3 SBOM, creates provenance/SBOM attestations, and reuses those tested artifacts for the GitHub Release and, once configured, PyPI Trusted Publishing.
 
 Expected release payload:
 
 ```text
-devdoctor_workstation-1.2.0rc1-py3-none-any.whl
-devdoctor_workstation-1.2.0rc1.tar.gz
+devdoctor_workstation-1.2.0-py3-none-any.whl
+devdoctor_workstation-1.2.0.tar.gz
 devdoctor-install.sh
 devdoctor.spdx.json
 SHA256SUMS
 ```
 
-PyPI publication remains disabled until the external Trusted Publisher for `devdoctor-workstation` and the protected `pypi` environment are configured. See [release distribution readiness](docs/RELEASE_DISTRIBUTION.md) and [v1.2.0rc1 release notes](docs/RELEASE_NOTES_v1.2.0rc1.md).
+PyPI publication remains disabled until the external Trusted Publisher for `devdoctor-workstation` and the protected `pypi` environment are configured. See [release distribution readiness](docs/RELEASE_DISTRIBUTION.md) and [v1.2.0 release notes](docs/RELEASE_NOTES_v1.2.0.md).
 
 ## Development
 
@@ -411,7 +411,7 @@ No. DevDoctor is intentionally Linux-first.
 - [Checks and catalog reference](docs/CHECKS.md)
 - [Distribution support evidence](docs/SUPPORTED_DISTROS.md)
 - [Release distribution readiness](docs/RELEASE_DISTRIBUTION.md)
-- [v1.2.0rc1 release notes](docs/RELEASE_NOTES_v1.2.0rc1.md)
+- [v1.2.0 release notes](docs/RELEASE_NOTES_v1.2.0.md)
 - [Examples](examples/README.md)
 - [Accessibility](docs/ACCESSIBILITY.md)
 - [Brand system](docs/BRAND.md)

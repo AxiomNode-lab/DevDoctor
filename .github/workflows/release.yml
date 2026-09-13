@@ -42,7 +42,8 @@ jobs:
           python scripts/benchmark.py \
             --iterations 3 \
             --max-startup-rss-mib 128 \
-            --max-scan-rss-mib 192 \
+            --max-scan-rss-mib 256 \
+            --max-scan-self-rss-mib 128 \
             --output /tmp/devdoctor-release-benchmark.json
 
       - name: Validate installer syntax
