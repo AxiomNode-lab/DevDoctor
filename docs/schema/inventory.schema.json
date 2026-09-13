@@ -1,0 +1,691 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AxiomNode-lab/DevDoctor/blob/main/docs/schema/inventory.schema.json",
+  "title": "DevDoctor inventory",
+  "description": "Output of `devdoctor --json`, `devdoctor check ... --json`, and `devdoctor export json`. schema_version is bumped only for breaking changes; additions to `system` may appear without a bump.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "system",
+    "summary",
+    "tools",
+    "profiles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "system": {
+      "$ref": "#/$defs/system"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "installed",
+        "missing",
+        "broken",
+        "warnings"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "installed": {
+          "type": "integer"
+        },
+        "missing": {
+          "type": "integer"
+        },
+        "broken": {
+          "type": "integer"
+        },
+        "warnings": {
+          "type": "integer"
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tool"
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "description",
+          "tool_ids"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tool_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "system": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "distribution",
+        "distribution_id",
+        "distribution_like",
+        "atomic_host",
+        "architecture",
+        "package_managers",
+        "path_analysis",
+        "path_issue_count",
+        "preferred_package_managers",
+        "is_container",
+        "is_wsl",
+        "is_root",
+        "can_sudo"
+      ],
+      "properties": {
+        "distribution": {
+          "type": "string"
+        },
+        "distribution_id": {
+          "type": "string"
+        },
+        "distribution_like": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "atomic_host": {
+          "type": "boolean"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "desktop_environment": {
+          "type": "string"
+        },
+        "session_type": {
+          "type": "string"
+        },
+        "shell": {
+          "type": "string"
+        },
+        "terminal": {
+          "type": "string"
+        },
+        "virtualization": {
+          "type": "string"
+        },
+        "is_root": {
+          "type": "boolean"
+        },
+        "can_sudo": {
+          "type": "boolean"
+        },
+        "is_wsl": {
+          "type": "boolean"
+        },
+        "is_container": {
+          "type": "boolean"
+        },
+        "path_entries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path_issue_count": {
+          "type": "integer"
+        },
+        "path_analysis": {
+          "$ref": "#/$defs/path_analysis"
+        },
+        "preferred_package_managers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package_managers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/package_manager"
+          }
+        }
+      }
+    },
+    "package_manager": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "installed",
+        "path",
+        "version",
+        "family",
+        "command_hint"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "family": {
+          "enum": [
+            "desktop",
+            "language",
+            "system",
+            "system-query",
+            "user",
+            "version-manager"
+          ]
+        },
+        "command_hint": {
+          "type": "string"
+        }
+      }
+    },
+    "path_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entries",
+        "issue_count",
+        "issues",
+        "shadowed_executables",
+        "cleanup_command"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "issue_count": {
+          "type": "integer"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path_issue"
+          }
+        },
+        "shadowed_executables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/shadowed_executable"
+          }
+        },
+        "cleanup_command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "path_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "problem",
+        "recommendation",
+        "export_command"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "empty_entry",
+            "duplicate_entry",
+            "missing_directory",
+            "not_directory",
+            "not_searchable",
+            "not_exported"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "recommendation": {
+          "type": "string"
+        },
+        "export_command": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "shadowed_executable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executable",
+        "primary_path",
+        "shadowed_paths"
+      ],
+      "properties": {
+        "executable": {
+          "type": "string"
+        },
+        "primary_path": {
+          "type": "string"
+        },
+        "shadowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "description",
+        "installed",
+        "version",
+        "executable",
+        "path",
+        "alternate_paths",
+        "package_manager",
+        "package_name",
+        "installation_method",
+        "config_locations",
+        "official_website",
+        "recommended_version",
+        "health",
+        "broken_installation",
+        "permission_issues",
+        "path_issues",
+        "missing_dependencies",
+        "dependency_status",
+        "repair_recommendations",
+        "install_plan"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "executable": {
+          "type": "string"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternate_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package_manager": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "installation_method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config_locations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "official_website": {
+          "type": "string"
+        },
+        "recommended_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "health": {
+          "enum": [
+            "ready",
+            "missing",
+            "warning",
+            "broken"
+          ]
+        },
+        "broken_installation": {
+          "type": "boolean"
+        },
+        "permission_issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path_issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependency_status": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency_status"
+          }
+        },
+        "repair_recommendations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repair_recommendation"
+          }
+        },
+        "install_plan": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/install_plan"
+            }
+          ]
+        }
+      }
+    },
+    "install_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_id",
+        "tool_title",
+        "manager",
+        "manager_reason",
+        "package_name",
+        "command",
+        "command_text",
+        "dry_run_command",
+        "verify_command",
+        "rollback_command",
+        "explanation",
+        "risk",
+        "requires_sudo",
+        "dependencies",
+        "estimated_download_size"
+      ],
+      "properties": {
+        "tool_id": {
+          "type": "string"
+        },
+        "tool_title": {
+          "type": "string"
+        },
+        "manager": {
+          "type": "string"
+        },
+        "manager_reason": {
+          "type": "string"
+        },
+        "package_name": {
+          "type": "string"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "command_text": {
+          "type": "string"
+        },
+        "dry_run_command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "verify_command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "rollback_command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "risk": {
+          "type": "string",
+          "pattern": "^(low|medium|high)( - .+)?$",
+          "description": "A level, optionally followed by ' - ' and a short reason (e.g. 'medium - requires system package privileges')."
+        },
+        "requires_sudo": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "estimated_download_size": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "repair_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "problem",
+        "reason",
+        "risk",
+        "command",
+        "command_text",
+        "verification_command",
+        "rollback_command",
+        "manual_action"
+      ],
+      "properties": {
+        "problem": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "command_text": {
+          "type": "string"
+        },
+        "verification_command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "rollback_command": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "manual_action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "dependency_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_id",
+        "title",
+        "required",
+        "installed",
+        "health",
+        "reason",
+        "install_plan"
+      ],
+      "properties": {
+        "tool_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "health": {
+          "enum": [
+            "ready",
+            "missing",
+            "warning",
+            "broken"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "install_plan": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/install_plan"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

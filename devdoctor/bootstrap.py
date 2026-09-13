@@ -24,6 +24,7 @@ from devdoctor.path_analysis import analyze_path, executable_paths
 from devdoctor.utils import get_hostname, get_username, parse_version, read_os_release, run_command
 
 BOOTSTRAP_TOOL_ENTRY_POINT_GROUP = "devdoctor.bootstrap_tools"
+INVENTORY_SCHEMA_VERSION = 1
 
 
 class BootstrapCategory(StrEnum):
@@ -342,6 +343,8 @@ class BootstrapInventory:
         """Convert the inventory to JSON data."""
 
         return {
+            # Contract: docs/schema/inventory.schema.json. Bump only for breaking changes.
+            "schema_version": INVENTORY_SCHEMA_VERSION,
             "system": self.system,
             "summary": {
                 "total": len(self.detections),

@@ -275,7 +275,15 @@ def diff(
             snapshots.save(current)
         if output_json:
             sys.stdout.write(
-                json.dumps({"since": None, "changed": False, "entries": [], "baseline": True})
+                json.dumps(
+                    {
+                        "schema_version": snapshots.DIFF_SCHEMA_VERSION,
+                        "since": None,
+                        "changed": False,
+                        "entries": [],
+                        "baseline": True,
+                    }
+                )
             )
             sys.stdout.write("\n")
         else:

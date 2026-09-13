@@ -17,7 +17,8 @@ from typing import Any
 from devdoctor.bootstrap import BootstrapInventory
 from devdoctor.paths import last_inventory_path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 1  # snapshot file format
+DIFF_SCHEMA_VERSION = 1  # `devdoctor diff --json` output
 
 # Order in which kinds of change are reported: problems first.
 _KIND_ORDER = {"disappeared": 0, "health": 1, "version": 2, "path": 3, "appeared": 4}
@@ -99,6 +100,8 @@ class InventoryDiff:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            # Contract: docs/schema/diff.schema.json.
+            "schema_version": DIFF_SCHEMA_VERSION,
             "since": self.since,
             "changed": self.changed,
             "path_issues": {"before": self.path_issues[0], "after": self.path_issues[1]},

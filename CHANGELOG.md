@@ -26,6 +26,7 @@ and this project uses semantic versioning.
 
 ### Added
 
+- JSON output contract: `docs/schema/{inventory,project,diff}.schema.json` (draft 2020-12) with a stability policy in `docs/JSON_SCHEMA.md`; inventory and diff payloads now carry `schema_version: 1` like `project` already did. Tests validate real command output against each schema and pin the enums to the code's tables — the schema immediately surfaced that install-plan `risk` is a level plus reason (`"medium - requires system package privileges"`), which is now documented as such.
 - `devdoctor fix`: alias of `repair-apply`, and the Findings panel now ends with the hint to run it; the guided, preview-first walk through repairs is discoverable from the diagnosis itself.
 - `devdoctor diff`: every full scan records a snapshot (`last-inventory.json` in the user state directory); `diff` rescans and reports tools that appeared or disappeared, health flips, version and path changes, and the PATH issue count, problems first. `--json`, `--exit-code`, `--keep-baseline`, and `--tools a,b` (scoped rescan that updates only those baseline entries). A read-only home never breaks a scan.
 - `examples/plugin`: an installable example catalog plugin (`devdoctor.bootstrap_tools` entry point) contributing `lazygit` and `tldr`, verified end to end in a clean environment.

@@ -13,9 +13,9 @@ DevDoctor is a Linux workstation diagnosis and repair CLI by [AxiomNode](https:/
 ## Next (in order)
 
 1. **Publish.** PyPI Trusted Publishing for `devdoctor-workstation`, a `v1.2.0` tag whose release carries the correctly named wheel and `SHA256SUMS`, and only then a Homebrew tap and an AUR package. Everything else on this list reaches nobody until `pip install devdoctor-workstation` works. *Owner action; the release workflow already builds and attests the artifacts.*
-2. **`devdoctor diff`.** Persist the last inventory (`~/.local/state/devdoctor/last-inventory.json`) on every full scan and show what changed since: tools that appeared or disappeared, health flips, version changes, new PATH issues. "What broke since yesterday?" is the question a doctor answers. Read-only; JSON output for scripts.
-3. **`devdoctor fix` (guided, still preview-first).** One command that walks the Findings top to bottom, shows each action with its rollback, and applies only what the user confirms per item — the Findings panel made actionable, built on the existing transaction journal.
-4. **Stable JSON schema.** Publish `docs/schema/bootstrap.schema.json` and `project.schema.json`, validate real output against them in CI, and version them (`schema_version` already exists in `project` output). CI consumers and the GitHub Action depend on this staying stable.
+2. **`devdoctor diff`.** Done.
+3. **`devdoctor fix` (guided, still preview-first).** Done as an alias of `repair-apply`, linked from the Findings panel.
+4. **Stable JSON schema.** Done: `docs/schema/{inventory,project,diff}.schema.json`, validated in CI, policy in `docs/JSON_SCHEMA.md`.
 5. **Recommended versions.** `ToolSpec.recommended_version` exists but is unused. Populate it from the project's own manifests during `devdoctor project`, and from a small curated table for LTS runtimes (Node, Python, Java), so `check` can say "installed 18, project wants 22" without any network access.
 6. **More real-host evidence.** Run the distro-integration probe on a Fedora Atomic / Bazzite image with real `rpm-ostree` (not the synthetic os-release), and on Debian stable, Alpine (`apk`), and Void (`xbps`) containers; promote those distros in `docs/SUPPORTED_DISTROS.md` only when the job exists.
 7. **Windows Subsystem for Linux and containers as first-class hosts.** WSL and container detection exist; planning does not adapt (no systemd, no snap in WSL, no sudo in many containers). Suppress plans that cannot work there and say why.

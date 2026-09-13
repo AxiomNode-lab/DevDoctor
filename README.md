@@ -301,7 +301,7 @@ devdoctor export json --output inventory.json
 devdoctor export markdown --output inventory.md
 ```
 
-JSON is the machine-readable inventory format. Markdown is useful for issues, handoffs, and onboarding notes. HTML is a standalone local report.
+JSON is the machine-readable inventory format and is a contract: [`docs/schema/`](docs/schema/) holds JSON Schemas for the inventory, `project`, and `diff` payloads, each carrying a `schema_version` that changes only for breaking changes ([policy](docs/JSON_SCHEMA.md)). Markdown is useful for issues, handoffs, and onboarding notes. HTML is a standalone local report.
 
 ## Safety model
 
@@ -406,6 +406,7 @@ No. DevDoctor is intentionally Linux-first.
 
 - [CLI reference](docs/CLI_REFERENCE.md)
 - [Project-aware diagnostics](docs/PROJECT_DIAGNOSTICS.md)
+- [JSON output contract](docs/JSON_SCHEMA.md)
 - [Usage](docs/USAGE.md)
 - [Checks and catalog reference](docs/CHECKS.md)
 - [Distribution support evidence](docs/SUPPORTED_DISTROS.md)
