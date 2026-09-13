@@ -502,6 +502,7 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
     )
     config_locations = _existing_config_locations(spec.config_paths)
     package_manager, package_name = _owning_package(path)
+    alternate_paths = _alternate_paths(all_paths, executable_path)
     missing_dependencies = tuple(
         dependency for dependency in spec.dependencies if shutil.which(dependency) is None
     )
@@ -518,11 +519,13 @@ def detect_tool(spec: ToolSpec, *, system: Mapping[str, JsonValue]) -> ToolDetec
         package_manager=package_manager,
         package_name=package_name,
         config_locations=config_locations,
-        alternate_paths=_alternate_paths(all_paths, executable_path),
+        alternate_paths=alternate_paths,
         installation_method=(
             compound_probe.installation_method
             if compound_probe is not None
-            else _installation_method(path, package_manager=package_manager)
+            else _installation_method(
+                path, package_manager=package_manager, alternate_paths=alternate_paths
+            )
         ),
         health=health,
         broken_installation=broken,
@@ -902,11 +905,50 @@ def _base_health(*, installed: bool, broken: bool) -> HealthState:
     return HealthState.READY
 
 
-def _installation_method(path: str | None, *, package_manager: str | None) -> str | None:
+# Version managers keep several installs of one tool side by side and expose the
+# active one through PATH order or shims. Paths are matched relative to $HOME.
+_VERSION_MANAGER_DIRS: tuple[tuple[str, str], ...] = (
+    ("nvm", ".nvm/versions/"),
+    ("pyenv", ".pyenv/versions/"),
+    ("pyenv", ".pyenv/shims/"),
+    ("rbenv", ".rbenv/versions/"),
+    ("rbenv", ".rbenv/shims/"),
+    ("asdf", ".asdf/installs/"),
+    ("asdf", ".asdf/shims/"),
+    ("mise", ".local/share/mise/installs/"),
+    ("mise", ".local/share/mise/shims/"),
+    ("sdkman", ".sdkman/candidates/"),
+    ("rustup", ".cargo/bin/"),
+)
+
+
+def version_manager_for(path: str | None) -> str | None:
+    """Name the version manager that owns ``path``, or None for an unmanaged location."""
+
+    if path is None:
+        return None
+    home = os.path.expanduser("~")
+    normalized = os.path.normpath(path)
+    for manager, relative in _VERSION_MANAGER_DIRS:
+        if normalized.startswith(os.path.join(home, relative)):
+            return manager
+    return None
+
+
+def _installation_method(
+    path: str | None,
+    *,
+    package_manager: str | None,
+    alternate_paths: Sequence[str] = (),
+) -> str | None:
     if package_manager:
         return package_manager
     if path is None:
         return None
+    manager = version_manager_for(path)
+    if manager is not None:
+        managed = 1 + sum(1 for other in alternate_paths if version_manager_for(other) == manager)
+        return f"{manager} ({managed} versions installed)" if managed > 1 else manager
     normalized = path.lower()
     home = str(Path.home()).lower()
     if ".linuxbrew" in normalized or "/homebrew/" in normalized:
@@ -974,13 +1016,21 @@ def _generic_repair_recommendations(
                 manual_action=f"Install `{dependency}` with your preferred package manager.",
             )
         )
-    if detection.alternate_paths:
+    manager = version_manager_for(detection.executable_path)
+    # Other versions under the same version manager are that manager's job, not a
+    # duplicate installation; only copies outside it are worth a look.
+    stray = tuple(
+        path
+        for path in detection.alternate_paths
+        if manager is None or version_manager_for(path) != manager
+    )
+    if stray:
         recommendations.append(
             RepairRecommendation(
                 problem="Duplicate installation detected",
                 reason=(
                     f"`{detection.spec.executable}` appears in multiple PATH locations: "
-                    f"{', '.join(detection.alternate_paths)}"
+                    f"{', '.join(stray)}"
                 ),
                 risk="low",
                 command=None,

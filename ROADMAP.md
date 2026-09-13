@@ -20,7 +20,7 @@ DevDoctor is a Linux workstation diagnosis and repair CLI by [AxiomNode](https:/
 6. **More real-host evidence.** Run the distro-integration probe on a Fedora Atomic / Bazzite image with real `rpm-ostree` (not the synthetic os-release), and on Debian stable, Alpine (`apk`), and Void (`xbps`) containers; promote those distros in `docs/SUPPORTED_DISTROS.md` only when the job exists.
 7. **Windows Subsystem for Linux and containers as first-class hosts.** WSL and container detection exist; planning does not adapt (no systemd, no snap in WSL, no sudo in many containers). Suppress plans that cannot work there and say why.
 8. **Shell-profile aware PATH repair.** The PATH panel already emits one cleanup command; find which profile file introduced a dead or duplicate entry (`~/.profile`, `~/.bashrc`, `~/.zshrc`, `~/.config/fish/config.fish`, `/etc/environment`) and point at the line, still without editing it.
-9. **Version-manager awareness.** Six `node` copies under `~/.nvm` are not a broken installation; they are a version manager doing its job. Recognise nvm/pyenv/rbenv/asdf/mise shims and report the active version plus the manager instead of duplicate-install warnings.
+9. **Version-manager awareness.** Done for nvm, pyenv, rbenv, asdf, mise, sdkman, and rustup paths.
 10. **Localized output.** The catalog and findings are structured data; a `--lang` switch (Arabic and Turkish first, matching the maintainers) is mostly a strings table.
 
 ## Later
