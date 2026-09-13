@@ -272,7 +272,8 @@
         "path",
         "problem",
         "recommendation",
-        "export_command"
+        "export_command",
+        "sources"
       ],
       "properties": {
         "kind": {
@@ -299,6 +300,26 @@
             "string",
             "null"
           ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "line"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
         }
       }
     },

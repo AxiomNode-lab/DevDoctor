@@ -19,7 +19,7 @@ DevDoctor is a Linux workstation diagnosis and repair CLI by [AxiomNode](https:/
 5. **Recommended versions.** `ToolSpec.recommended_version` exists but is unused. Populate it from the project's own manifests during `devdoctor project`, and from a small curated table for LTS runtimes (Node, Python, Java), so `check` can say "installed 18, project wants 22" without any network access.
 6. **More real-host evidence.** Run the distro-integration probe on a Fedora Atomic / Bazzite image with real `rpm-ostree` (not the synthetic os-release), and on Debian stable, Alpine (`apk`), and Void (`xbps`) containers; promote those distros in `docs/SUPPORTED_DISTROS.md` only when the job exists.
 7. **Windows Subsystem for Linux and containers as first-class hosts.** Done for privileges (root drops `sudo`; missing sudo is stated) and systemd (service repairs only when it runs). Still open: snap on WSL.
-8. **Shell-profile aware PATH repair.** The PATH panel already emits one cleanup command; find which profile file introduced a dead or duplicate entry (`~/.profile`, `~/.bashrc`, `~/.zshrc`, `~/.config/fish/config.fish`, `/etc/environment`) and point at the line, still without editing it.
+8. **Shell-profile aware PATH repair.** Done: missing and duplicate entries point at the profile lines that set them.
 9. **Version-manager awareness.** Done for nvm, pyenv, rbenv, asdf, mise, sdkman, and rustup paths.
 10. **Localized output.** The catalog and findings are structured data; a `--lang` switch (Arabic and Turkish first, matching the maintainers) is mostly a strings table.
 

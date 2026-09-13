@@ -276,7 +276,7 @@ Applied actions are recorded in a transaction journal. `repair-rollback` require
 
 ## PATH and package ownership
 
-The PATH analyzer reports empty entries, duplicates, missing directories, non-searchable directories, common user binary directories that are not exported, and shadowed executables.
+The PATH analyzer reports empty entries, duplicates, missing directories, non-searchable directories, common user binary directories that are not exported, and shadowed executables. For a missing or duplicate entry it names the shell profile lines that set it (`~/.bashrc:45`, `/etc/environment:1`) and emits one combined cleanup `export PATH=…` line; it never edits those files.
 
 `path-conflicts` adds bounded version and package-ownership probes for duplicate executable names. `uninstall` uses a stricter rule: it refuses removal unless the executable owner can be matched to the catalog package. On Atomic systems, RPM ownership by itself is not considered proof that a package was rpm-ostree layered.
 
