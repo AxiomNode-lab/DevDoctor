@@ -1870,8 +1870,9 @@ BOOTSTRAP_TOOLS: tuple[ToolSpec, ...] = (
         packages=_packages(
             apt="default-jdk",
             dnf="java-latest-openjdk-devel",
+            # openSUSE: java-<N>-openjdk-devel packages provide the java-devel capability.
             pacman="jdk-openjdk",
-            zypper="java-latest-openjdk-devel",
+            zypper="java-devel",
             xbps="openjdk",
             apk="openjdk17",
             brew="openjdk",

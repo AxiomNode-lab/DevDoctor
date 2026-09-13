@@ -286,3 +286,9 @@ def test_pacman_mappings_use_names_in_the_official_arch_repositories() -> None:
     assert _catalog("mysql").packages["pacman"] == "mariadb-clients"
     assert _catalog("redis-cli").packages["pacman"] == "valkey"
     assert "pacman" not in _catalog("asdf").packages
+
+
+def test_zypper_java_uses_the_java_devel_capability() -> None:
+    # Found by the Tumbleweed catalog job: openSUSE ships java-<N>-openjdk-devel
+    # packages that provide `java-devel`; there is no java-latest-openjdk-devel.
+    assert _catalog("java").packages["zypper"] == "java-devel"
