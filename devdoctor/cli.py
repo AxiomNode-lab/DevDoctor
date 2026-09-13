@@ -28,6 +28,7 @@ from devdoctor.bootstrap import (
     install_plan_for_spec,
     profile_by_id,
     specs_for_profile,
+    without_sudo,
 )
 from devdoctor.doctor import DevDoctor
 from devdoctor.exporters.bootstrap import (
@@ -1032,7 +1033,7 @@ def _update_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...], ..
             commands.append(("flatpak", "update"))
         if "brew" in managers:
             commands.extend((("brew", "update"), ("brew", "upgrade")))
-        return tuple(commands)
+        return tuple(without_sudo(command, inventory.system) for command in commands)
     if "apt" in managers:
         commands.extend((("sudo", "apt", "update"), ("sudo", "apt", "upgrade")))
     if "dnf" in managers:
@@ -1047,7 +1048,7 @@ def _update_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...], ..
         commands.append(("sudo", "snap", "refresh"))
     if "brew" in managers:
         commands.extend((("brew", "update"), ("brew", "upgrade")))
-    return tuple(commands)
+    return tuple(without_sudo(command, inventory.system) for command in commands)
 
 
 def _cache_clean_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...], ...]:
@@ -1067,7 +1068,7 @@ def _cache_clean_commands(inventory: BootstrapInventory) -> tuple[tuple[str, ...
         commands.append(("pnpm", "store", "prune"))
     if "pip" in managers:
         commands.append(("python", "-m", "pip", "cache", "purge"))
-    return tuple(commands)
+    return tuple(without_sudo(command, inventory.system) for command in commands)
 
 
 def _installed_manager_ids(inventory: BootstrapInventory) -> set[str]:

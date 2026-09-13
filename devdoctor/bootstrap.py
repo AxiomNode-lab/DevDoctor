@@ -572,7 +572,9 @@ def _standard_install_plan(
     package = spec.packages.get(manager)
     if package is None:
         return None
-    return _plan_for_manager(spec, manager=manager, package=package, reason=manager_reason)
+    return _plan_for_manager(
+        spec, manager=manager, package=package, reason=manager_reason, system=system
+    )
 
 
 def _atomic_install_plan(
@@ -595,6 +597,7 @@ def _atomic_install_plan(
                 "Atomic/image-based host: prefer a mapped user-space or package-scoped manager "
                 "before layering the base image."
             ),
+            system=system,
         )
         if plan is not None:
             return plan
@@ -611,6 +614,7 @@ def _atomic_install_plan(
                     "rpm-ostree layering for the Fedora package mapping; DNF host mutation is "
                     "intentionally suppressed."
                 ),
+                system=system,
             )
     return None
 
@@ -643,6 +647,7 @@ def _nix_fallback_plan(
         reason=(
             "Nix is installed and DevDoctor has an explicit user-profile mapping for this tool."
         ),
+        system=system,
     )
     if plan is None:
         return None
@@ -659,10 +664,17 @@ def _plan_for_manager(
     manager: str,
     package: str,
     reason: str,
+    system: Mapping[str, JsonValue],
 ) -> InstallPlan | None:
     command, dry_run, rollback = _manager_commands(manager, package)
     if command is None:
         return None
+    command = without_sudo(command, system)
+    rollback = without_sudo(rollback, system) if rollback else rollback
+    explanation = f"Install {spec.title} using {manager} package `{package}`."
+    requires_sudo = _requires_sudo(command)
+    if requires_sudo and system.get("can_sudo") is False:
+        explanation += " Needs root, but sudo is not available on this host."
     return InstallPlan(
         tool_id=spec.id,
         tool_title=spec.title,
@@ -673,11 +685,25 @@ def _plan_for_manager(
         dry_run_command=dry_run,
         verify_command=_verification_command(spec),
         rollback_command=rollback,
-        explanation=f"Install {spec.title} using {manager} package `{package}`.",
+        explanation=explanation,
         risk=_install_risk(manager),
-        requires_sudo=_requires_sudo(command),
+        requires_sudo=requires_sudo,
         dependencies=tuple(dependency.tool_id for dependency in spec.tool_dependencies),
     )
+
+
+def without_sudo(command: tuple[str, ...], system: Mapping[str, JsonValue]) -> tuple[str, ...]:
+    """Drop a leading ``sudo`` when already root (containers often have no sudo at all)."""
+
+    if command and command[0] == "sudo" and system.get("is_root") is True:
+        return command[1:]
+    return command
+
+
+def _systemd_running() -> bool:
+    """True when systemd is the running init, not merely installed (containers, WSL1)."""
+
+    return Path("/run/systemd/system").is_dir()
 
 
 def profile_by_id(profile_id: str) -> BootstrapProfile | None:
@@ -1117,7 +1143,7 @@ def _docker_recommendations(detection: ToolDetection) -> tuple[RepairRecommendat
                 manual_action="Log out and back in after changing Docker group membership.",
             ),
         )
-    if shutil.which("systemctl"):
+    if shutil.which("systemctl") and _systemd_running():
         return (
             RepairRecommendation(
                 problem="Docker daemon is not running",
@@ -1132,7 +1158,10 @@ def _docker_recommendations(detection: ToolDetection) -> tuple[RepairRecommendat
         RepairRecommendation(
             problem="Docker daemon is unavailable",
             reason=(
-                "`docker info` failed, and no systemctl command is available for an "
+                "`docker info` failed, and systemd is not running here (a container or "
+                "WSL without systemd), so there is no service to start automatically."
+                if shutil.which("systemctl")
+                else "`docker info` failed, and no systemctl command is available for an "
                 "automatic service start."
             ),
             risk="medium",
