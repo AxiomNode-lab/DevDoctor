@@ -5,7 +5,7 @@ Released 2026-09-13 by [AxiomNode](https://axiomnode.tech/). The first published
 ## Install
 
 ```bash
-curl -fsSL -o devdoctor-install.sh https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/scripts/install.sh
+curl -fsSL -o devdoctor-install.sh https://github.com/AxiomNode-lab/DevDoctor/releases/download/v1.2.0/devdoctor-install.sh
 sh devdoctor-install.sh --source github --version 1.2.0   # verified wheel from this release
 sh devdoctor-install.sh --source git                       # or straight from the repository
 ```
