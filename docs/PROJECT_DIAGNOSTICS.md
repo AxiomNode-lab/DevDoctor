@@ -61,7 +61,7 @@ The comparator is deliberately bounded. It supports common numeric expressions u
 >=18 || ^22
 ```
 
-Unsupported expressions are returned as `unknown` instead of being approximated. For example, the release-candidate parser does not claim full npm SemVer or full PEP 440 compatibility.
+Unsupported expressions are returned as `unknown` instead of being approximated. For example, the parser does not claim full npm SemVer or full PEP 440 compatibility.
 
 `package.json` `packageManager` integrity suffixes such as `pnpm@9.15.0+sha512-...` are stripped before the numeric version is compared.
 
