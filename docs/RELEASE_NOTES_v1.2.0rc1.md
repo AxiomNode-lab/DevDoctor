@@ -1,3 +1,5 @@
+> Historical pre-release notes. The candidate described here was superseded by the published v1.2.0 release.
+
 # DevDoctor v1.2.0rc1
 
 `v1.2.0rc1` is a release candidate focused on safer workstation mutations, evidence-backed Linux package-manager support, and a verifiable release pipeline.
