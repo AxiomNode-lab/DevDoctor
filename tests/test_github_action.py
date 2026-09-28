@@ -1,4 +1,4 @@
-"""`uses: AxiomNode-lab/DevDoctor@main` must run `devdoctor project` on the caller's repo."""
+"""`uses: AxiomNode-lab/DevDoctor@v1.2.0` must run `devdoctor project` on the caller's repo."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ def test_action_is_a_composite_action_with_documented_inputs() -> None:
     assert set(action["inputs"]) >= {"path", "fail-on-mismatch", "ref"}
     assert action["inputs"]["path"]["default"] == "."
     assert action["inputs"]["fail-on-mismatch"]["default"] == "true"
-    assert action["inputs"]["ref"]["default"] == "main"
+    assert action["inputs"]["ref"]["default"] == "v1.2.0"
     assert action["branding"]["icon"] and action["branding"]["color"]
 
 
