@@ -213,7 +213,7 @@ devdoctor self-update
 devdoctor self-update --apply
 ```
 
-The release-candidate distribution name is `devdoctor-workstation`; the console command remains `devdoctor`.
+The Python distribution is `devdoctor-workstation`; the console command remains `devdoctor`.
 
 Exit code: `0` when the command is printed or completes.
 
