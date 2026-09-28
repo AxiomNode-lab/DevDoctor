@@ -60,28 +60,17 @@ Typical findings include Docker daemon failures, missing runtime dependencies, b
 
 ## Install
 
-DevDoctor requires Python 3.11 or newer.
+DevDoctor v1.2.0 is the current GitHub release. It requires Python 3.11 or newer.
 
-The product name is **DevDoctor**. The console command is **`devdoctor`**. The Python distribution prepared for publication is **`devdoctor-workstation`**.
-
-> `devdoctor-cli` is not this project's distribution name. Do not use it to install or update this repository.
-
-### Current repository build
-
-Until the first `devdoctor-workstation` PyPI release is published and verified, install directly from this repository. The installer creates a user-owned virtual environment, links `~/.local/bin/devdoctor`, previews before acting, and never uses sudo:
+Install the verified GitHub release:
 
 ```bash
-curl -fsSL -o devdoctor-install.sh https://raw.githubusercontent.com/AxiomNode-lab/DevDoctor/main/scripts/install.sh
-sh devdoctor-install.sh --source git
-devdoctor --version
+curl -fsSL -o devdoctor-install.sh https://github.com/AxiomNode-lab/DevDoctor/releases/download/v1.2.0/devdoctor-install.sh
+sh devdoctor-install.sh --source github --version 1.2.0
+rm devdoctor-install.sh
 ```
 
-Or with pip alone:
-
-```bash
-python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
-devdoctor --version
-```
+The installer downloads the exact release wheel, verifies it against `SHA256SUMS`, installs it into a user-owned virtual environment, and does not use sudo.
 
 For development:
 
@@ -91,9 +80,7 @@ cd DevDoctor
 python -m pip install -e ".[dev]"
 ```
 
-A PyPI Trusted Publishing workflow is prepared for tagged releases. The README intentionally does not advertise `pip install devdoctor-workstation` until the public PyPI project has been created, published, and verified.
-
-The Homebrew formula is also release-readiness work. Do not rely on a Homebrew install command until a tap exists and its clean installation CI passes.
+The Python distribution is `devdoctor-workstation`. The console command is `devdoctor`.
 
 ## Quick start
 
@@ -160,10 +147,10 @@ The same check runs as a one-step action on any repository. It is read-only, pri
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: AxiomNode-lab/DevDoctor@main
+- uses: AxiomNode-lab/DevDoctor@v1.2.0
   with:
     path: .            # directory with the project manifests (default: .)
-    ref: main          # DevDoctor version to install: a tag or branch (default: main)
+    ref: v1.2.0        # DevDoctor version
 ```
 
 This repository runs it on itself in [`project-check.yml`](.github/workflows/project-check.yml).
