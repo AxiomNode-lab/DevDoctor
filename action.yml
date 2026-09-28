@@ -20,7 +20,7 @@ inputs:
   ref:
     description: DevDoctor git ref to install (a tag such as v1.2.0 or a branch).
     required: false
-    default: "main"
+    default: "v1.2.0"
   python-version:
     description: Python used to run DevDoctor (3.11 or newer).
     required: false
