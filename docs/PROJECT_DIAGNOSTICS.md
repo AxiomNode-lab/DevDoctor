@@ -22,7 +22,7 @@ Exit behavior:
 
 ## Supported project evidence
 
-The first release-candidate implementation reads these files when they are regular UTF-8 files inside the selected project root:
+The current implementation reads these files when they are regular UTF-8 files inside the selected project root:
 
 | Source | Evidence used |
 | --- | --- |
