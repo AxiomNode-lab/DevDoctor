@@ -2,29 +2,28 @@
 
 This page points to version-specific migration notes.
 
-## v1.2.0 release candidate
+## v1.2.0
 
-The GitHub project remains `DevDoctor`, the import package remains `devdoctor`, and the executable command remains `devdoctor`.
+DevDoctor v1.2.0 uses these stable identities:
 
-The Python distribution prepared for publication is now `devdoctor-workstation`.
+- Product: `DevDoctor`
+- Python package: `devdoctor`
+- Executable: `devdoctor`
+- Python distribution: `devdoctor-workstation`
 
-The earlier candidate name `devdoctor-cli` is already used by another public project. It must not be used to install or update this repository. If you installed a package named `devdoctor-cli`, do not assume it came from `AxiomNode-lab/DevDoctor`; inspect its package metadata and source before removing or changing it.
+The v1.2.0 GitHub release includes the wheel, source archive, installer, checksum manifest, and SBOM.
 
-Before the first verified PyPI release, use the repository installation path:
-
-```bash
-python -m pip install "git+https://github.com/AxiomNode-lab/DevDoctor.git"
-devdoctor --version
-```
-
-After `devdoctor-workstation` is published and verified, the intended PyPI command will be:
+Install the release with the verified installer:
 
 ```bash
-python -m pip install --upgrade devdoctor-workstation
-devdoctor --version
+curl -fsSL -o devdoctor-install.sh https://github.com/AxiomNode-lab/DevDoctor/releases/download/v1.2.0/devdoctor-install.sh
+sh devdoctor-install.sh --source github --version 1.2.0
+rm devdoctor-install.sh
 ```
 
-`devdoctor self-update` follows the same distribution identity.
+The earlier candidate name `devdoctor-cli` is not the distribution name for this repository.
+
+`devdoctor self-update` targets `devdoctor-workstation`.
 
 ## v1.1.0
 
